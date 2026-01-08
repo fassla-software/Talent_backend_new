@@ -464,6 +464,16 @@
         </span>
     </a>
 </li>
+
+<li>
+    <a class="menu {{ $request->routeIs('admin.ticket.*') ? 'active' : '' }}"
+        href="{{ route('admin.ticket.index') }}">
+        <span>
+            <i class="fa-solid fa-ticket menu-icon"></i>
+            {{ __('Tickets') }}
+        </span>
+    </a>
+</li>
         
 <li class="menu-divider">
     <span class="menu-title">{{ __('Other') }}</span>

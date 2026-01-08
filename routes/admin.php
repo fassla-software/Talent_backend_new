@@ -48,6 +48,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\TraderUsersController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\ReportDropdownController;
+use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\InspectionVisitController;
 
 /*
@@ -481,11 +482,11 @@ Route::name('admin.')->group(function () {
             Route::delete('/report-dropdowns/{id}', 'destroy')->name('reportDropdown.destroy');
         });
     
-        // Inspection Visits routes
-        Route::controller(InspectionVisitController::class)->group(function () {
-            Route::get('/inspection-visits', 'index')->name('inspectionVisit.index');
-            Route::get('/inspection-visits/{id}', 'show')->name('inspectionVisit.show');
-            Route::put('/inspection-visits/{id}/status', 'updateStatus')->name('inspectionVisit.updateStatus');
+        // Tickets routes
+        Route::controller(TicketController::class)->group(function () {
+            Route::get('/tickets', 'index')->name('ticket.index');
+            Route::put('/tickets/{id}', 'update')->name('ticket.update');
+            Route::delete('/tickets/{id}', 'destroy')->name('ticket.destroy');
         });
     });
 });
