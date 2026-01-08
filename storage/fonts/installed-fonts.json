@@ -1,0 +1,13 @@
+{
+    "cairo": {
+        "normal": "cairo_normal_ddd90a38daefb6bf345393152732bca8",
+        "500": "\/home\/app\/public_html\/storage\/fonts\/cairo_500_8bd8e266e92e31ff0d7c63ee36ed7b93",
+        "600": "\/home\/app\/public_html\/storage\/fonts\/cairo_600_dc01825879fa79a7c51dfcd1e797822b",
+        "bold": "\/home\/app\/public_html\/storage\/fonts\/cairo_bold_23a9b2dc30935e892c606fbbafd14072"
+    },
+    "tajawal": {
+        "normal": "\/home\/app\/public_html\/storage\/fonts\/tajawal_normal_c91c73f9f61c3351c5303523a2df7053",
+        "500": "\/home\/app\/public_html\/storage\/fonts\/tajawal_500_0581a732caba48f7421c4d500e19d395",
+        "bold": "tajawal_bold_efbff90ce1c530133306e47027557cfe"
+    }
+}

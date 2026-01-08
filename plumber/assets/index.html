@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      /* Ensure the body takes the full height and width of the viewport */
+
+      /* Ensure the body takes the full height and width of the page */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        width: 595px;
+        height: 842px;
+        overflow: hidden;
+        /* Prevent scrollbars */
+      }
+
+      /* Background container to cover the whole page */
+      .bg {
+        width: 100%;
+        height: 100%;
+        background: url('./cer.jpg') no-repeat center center;
+        background-size: cover;
+        /* Stretch the image to fill the container */
+        overflow: hidden;
+        position: relative;
+        /* Ensure absolute elements position correctly */
+        overflow: hidden;
+      }
+
+      .info {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+      }
+
+      .number {
+        font-size: 12px;
+        position: absolute;
+        top: 260px;
+        right: 130px;
+      }
+
+      .name {
+        position: absolute;
+        top: 290px;
+        right: 140px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .city {
+        position: absolute;
+        top: 315px;
+        right: 130px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .address {
+        position: absolute;
+        top: 343px;
+        right: 120px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .barcode {
+        position: absolute;
+        bottom: 150px;
+        left: 80px;
+        height: auto;
+      }
+
+      .company_name {
+        position: absolute;
+        top: 370px;
+        right: 230px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .description {
+        position: absolute;
+        top: 395px;
+        right: 225px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .date {
+        position: absolute;
+        top: 260px;
+        left: 70px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .user_phone {
+        position: absolute;
+        top: 290px;
+        left: 70px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .company_phone {
+        position: absolute;
+        top: 370px;
+        left: 70px;
+        font-size: 12px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="bg">
+      <div class="info">
+        <p class="name" id="name">omnia</p>
+        <p class="number" id="number">123</p>
+        <p class="city" id="city">Giza</p>
+        <p class="address" id="address">احمد سوكارنوامبابه العجوزة</p>
+        <p class="company_name" id="company_name">Talnet</p>
+        <p class="description" id="description">description</p>
+        <p class="date" id="date">2024/05/03</p>
+        <p class="user_phone" id="user_phone">011111111111111</p>
+        <p class="company_phone" id="company_phone">011111111111111</p>
+        <img class="barcode" crossorigin="anonymous" id="barcode" src="barcode.png" />
+      </div>
+    </div>
+  </body>
+</html>

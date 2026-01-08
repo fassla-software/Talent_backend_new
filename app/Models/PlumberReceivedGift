@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class PlumberReceivedGift extends Model
+{
+    // Disable automatic timestamps
+    public $timestamps = false;
+
+    // Specify the custom names for the timestamp columns
+    const CREATED_AT = 'createdAt';
+    const UPDATED_AT = 'updatedAt';
+}
