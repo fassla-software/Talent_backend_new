@@ -43,6 +43,9 @@
                                     <td>{{ date('Y-m-d', strtotime($ticket['createdAt'])) }}</td>
                                     <td class="text-center">
                                         <div class="d-flex gap-2 justify-content-center">
+                                            <a href="{{ route('admin.ticket.show', $ticket['id']) }}" class="btn btn-outline-info btn-sm">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
                                             <button type="button" class="btn btn-outline-primary btn-sm"
                                                 onclick="openEditModal({{ json_encode($ticket) }})">
                                                 <i class="fa-solid fa-pen"></i>
