@@ -13,6 +13,7 @@ type certificateType = {
   company_phone: string;
   user_phone: string;
   url: string;
+  description: string;
 };
 
 export const createCertificatePDF = async (certificateData: certificateType) => {

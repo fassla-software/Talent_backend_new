@@ -488,12 +488,13 @@ export const approveInspectionRequest = async (data: {
     certificate_id: request.certificate_id,
     user_name: request.user_name,
     user_phone: request.user_phone,
-    company_name: 'Talent',
-    company_phone: '12345679',
+    company_name: request.seller_name,
+    company_phone: request.seller_phone,
     city: request.city,
     address: request.address,
     date: request.inspection_date.toISOString().split('T')[0],
     url: `${BASE_URL}/PDF/${request.user_name}_${request.certificate_id}`,
+    description: request.description,
   });
 
   const fileName = path.basename(fileUrl);
