@@ -19,6 +19,7 @@ import ReferralConfig from '../user/ReferralConfig.model';
 import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspection_request.model';
 import { PendingBonus } from '../user/pending-bonus.model';
 import Trader from '../trader/trader.model';
+import EnvoySetting from '../envoy/envoy.model';
 
 
 import {
@@ -385,6 +386,10 @@ export const loginPlumber = async (data: ILoginPlumber) => {
   await user.save();
 
   if (role === Roles.Envoy || role === Roles.TRADER) {
+    if (role === Roles.Envoy) {
+      const envoySetting = await EnvoySetting.findOne({ where: { user_id: user.id } });
+      return { token, user: { ...user.toJSON(), role, envoySetting } };
+    }
     return { token, user: { ...user.toJSON(), role } };
   }
 

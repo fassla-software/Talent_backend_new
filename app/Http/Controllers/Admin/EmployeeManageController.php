@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Models\EnvoySetting;
 use Spatie\Permission\Models\Role;
 
 class EmployeeManageController extends Controller
@@ -65,31 +66,41 @@ public function index(Request $request)
     }
 
     public function store(UserRequest $request)
-{
-    $user = User::where('phone', $request->phone)->first();
-    if ($user) {
-        return back()->withError(__('Phone number already exists'));
+    {
+        $user = User::where('phone', $request->phone)->first();
+        if ($user) {
+            return back()->withError(__('Phone number already exists'));
+        }
+
+        $request['is_active'] = true;
+        $user = UserRepository::storeByRequest($request);
+
+        // Assign the role to the user
+        $user->assignRole($request->role);
+
+        // Save the user to the plumbers table if the role is plumber
+        if ($request->role === 'plumber') {
+            \App\Models\Plumber::create([
+                'user_id' => $user->id,
+            ]);
+        }
+
+        if ($request->role === 'envoy') {
+            EnvoySetting::create([
+                'user_id' => $user->id,
+                'weight' => $request->weight ?? 0,
+                'target' => $request->target ?? 0,
+                'salary' => $request->salary ?? 0,
+                'region' => $request->region,
+            ]);
+        }
+
+
+        // Store wallet data for the user
+        WalletRepository::storeByRequest($user);
+
+        return to_route('admin.employee.index')->withSuccess(__('Created successfully'));
     }
-
-    $request['is_active'] = true;
-    $user = UserRepository::storeByRequest($request);
-
-    // Assign the role to the user
-    $user->assignRole($request->role);
-
-    // Save the user to the plumbers table if the role is plumber
-    if ($request->role === 'plumber') {
-    \App\Models\Plumber::create([
-        'user_id' => $user->id,  // Only the user_id field is being populated
-    ]);
-}
-
-
-    // Store wallet data for the user
-    WalletRepository::storeByRequest($user);
-
-    return to_route('admin.employee.index')->withSuccess(__('Created successfully'));
-}
 
 
     public function resetPassword(User $user, ShopPasswordResetRequest $request)
@@ -227,6 +238,18 @@ public function update(Request $request, $id)
 
     // Sync the role using Spatie method
     $user->syncRoles([$request->role]);
+
+    if ($request->role === 'envoy') {
+        EnvoySetting::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'weight' => $request->weight ?? 0,
+                'target' => $request->target ?? 0,
+                'salary' => $request->salary ?? 0,
+                'region' => $request->region,
+            ]
+        );
+    }
 
     return redirect()->route('admin.employee.index')->with('success', 'User updated successfully');
 }
