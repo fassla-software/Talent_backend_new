@@ -15,6 +15,7 @@ import segmentRouter from '../modules/segment/segment.routes';
 import traderRouter from '../modules/trader/trader.routes';
 import reportDropdownRouter from '../modules/reportDropdowns/report-dropdowns.routes';
 import ticketRouter from '../modules/ticket/ticket.routes';
+import awardRouter from '../modules/award/award.routes';
 
 const indexRouter = express.Router();
 
@@ -34,5 +35,6 @@ indexRouter.use('/config', configRouter);
 indexRouter.use('/segment', segmentRouter);
 indexRouter.use('/report-dropdowns', reportDropdownRouter);
 indexRouter.use('/ticket', ticketRouter);
+indexRouter.use('/award', awardRouter);
 
 export default indexRouter;
