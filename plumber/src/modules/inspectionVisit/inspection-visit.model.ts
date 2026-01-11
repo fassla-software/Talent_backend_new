@@ -1,8 +1,8 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/db';
-import InspectionRequest from '../inspectionRequest/inspection_request.model';
 import User from '../user/user.model';
 import VisitReport from './visit-report.model';
+import Trader from '../trader/trader.model';
 
 export enum VisitStatus {
   PENDING = 'PENDING',
@@ -12,8 +12,8 @@ export enum VisitStatus {
 
 class InspectionVisit extends Model {
   public id!: number;
-  public inspection_request_id!: number;
   public inspector_id!: number;
+  public trader_id?: number | null;
   public report_id?: number | null;
   public status!: VisitStatus;
   public check_in_at?: Date | null;
@@ -26,8 +26,8 @@ class InspectionVisit extends Model {
   public updatedAt!: Date;
 
   // Relations
-  public inspectionRequest?: InspectionRequest;
   public inspector?: User;
+  public trader?: Trader;
   public visitReport?: VisitReport;
 
   // Helper methods
@@ -51,14 +51,6 @@ InspectionVisit.init(
       primaryKey: true,
       autoIncrement: true,
     },
-    inspection_request_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'inspection_requests',
-        key: 'id',
-      },
-    },
     inspector_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -66,6 +58,16 @@ InspectionVisit.init(
         model: 'users',
         key: 'id',
       },
+    },
+    trader_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'traders',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
     },
     report_id: {
       type: DataTypes.INTEGER,
@@ -114,19 +116,19 @@ InspectionVisit.init(
 );
 
 // Associations
-InspectionVisit.belongsTo(InspectionRequest, {
-  foreignKey: 'inspection_request_id',
-  as: 'inspectionRequest',
-});
-
-InspectionRequest.hasMany(InspectionVisit, {
-  foreignKey: 'inspection_request_id',
-  as: 'visits',
-});
-
 InspectionVisit.belongsTo(User, {
   foreignKey: 'inspector_id',
   as: 'inspector',
+});
+
+InspectionVisit.belongsTo(Trader, {
+  foreignKey: 'trader_id',
+  as: 'trader',
+});
+
+Trader.hasMany(InspectionVisit, {
+  foreignKey: 'trader_id',
+  as: 'inspectionVisits',
 });
 
 InspectionVisit.belongsTo(VisitReport, {
