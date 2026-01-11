@@ -97,8 +97,8 @@ export const checkOutHandler = asyncHandler(async (req: AuthenticatedRequest, re
 
 export const getVisitStatusHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const inspectorId = parseInt(req.user!.id);
-  const inspection_request_id = parseInt(req.params.id);
-  const status = await getVisitStatus(inspectorId, inspection_request_id);
+  const traderId = parseInt(req.params.id);
+  const status = await getVisitStatus(inspectorId, traderId);
   res.status(200).json({
     message: 'Visit status retrieved',
     ...status,
