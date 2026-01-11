@@ -2,11 +2,6 @@ import { body, param } from 'express-validator';
 import { strict, handleValidationErrors } from '../../utils/base.validators';
 
 export const checkInValidation = [
-  body('inspection_request_id')
-    .isInt()
-    .withMessage('inspection_request_id must be a number')
-    .notEmpty()
-    .withMessage('inspection_request_id is required'),
   body('latitude')
     .isFloat({ min: -90, max: 90 })
     .withMessage('Latitude must be a valid decimal number between -90 and 90')
@@ -17,16 +12,21 @@ export const checkInValidation = [
     .withMessage('Longitude must be a valid decimal number between -180 and 180')
     .notEmpty()
     .withMessage('longitude is required'),
+  body('trader_id')
+    .isInt()
+    .withMessage('trader_id must be a number')
+    .notEmpty()
+    .withMessage('trader_id is required'),
   handleValidationErrors,
   strict,
 ];
 
 export const checkOutValidation = [
-  body('inspection_request_id')
+  body('inspection_visit_id')
     .isInt()
-    .withMessage('inspection_request_id must be a number')
+    .withMessage('inspection_visit_id must be a number')
     .notEmpty()
-    .withMessage('inspection_request_id is required'),
+    .withMessage('inspection_visit_id is required'),
   body('latitude')
     .isFloat({ min: -90, max: 90 })
     .withMessage('Latitude must be a valid decimal number between -90 and 90')
@@ -42,11 +42,11 @@ export const checkOutValidation = [
 ];
 
 export const submitVisitReportValidation = [
-  body('inspection_request_id')
+  body('inspection_visit_id')
     .isInt()
-    .withMessage('inspection_request_id must be a number')
+    .withMessage('inspection_visit_id must be a number')
     .notEmpty()
-    .withMessage('inspection_request_id is required'),
+    .withMessage('inspection_visit_id is required'),
   // Customer Information
   body('customer_name')
     .isString()
@@ -151,9 +151,9 @@ export const submitVisitReportValidation = [
 export const getVisitStatusValidation = [
   param('id')
     .isInt()
-    .withMessage('inspection_request_id must be a number')
+    .withMessage('trader_id must be a number')
     .notEmpty()
-    .withMessage('inspection_request_id is required'),
+    .withMessage('trader_id is required'),
   handleValidationErrors,
   strict,
 ];

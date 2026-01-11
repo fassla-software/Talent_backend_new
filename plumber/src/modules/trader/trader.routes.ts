@@ -7,7 +7,8 @@ import {
     getProfileHandler,
     bulkDeleteTradersHandler,
     acceptTraderHandler,
-    rejectTraderHandler
+    rejectTraderHandler,
+    searchTradersHandler
 } from './trader.controller';
 import { paramsValidator } from '../plumber/plumber.validation';
 import { bulkDeleteValidation } from './trader.validation';
@@ -15,6 +16,7 @@ import { authenticate } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
+router.get('/search', searchTradersHandler);
 router.get('/', getTradersHandler);
 router.get('/profile', authenticate, getProfileHandler);
 router.get('/:id', paramsValidator, getTraderByIdHandler);

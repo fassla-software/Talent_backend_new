@@ -9,7 +9,8 @@ import {
     bulkDeleteTraders,
     acceptTrader,
     rejectTrader,
-    getProfile
+    getProfile,
+    searchTraders
 } from './trader.service';
 
 export const getTradersHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -64,3 +65,17 @@ export const updateProfileHandler = asyncHandler(async (req: Request, res: Respo
     await updateProfile(token, data);
     res.status(200).json({ message: 'Profile updated successfully' });
 }, 'Failed to update profile');
+
+export const searchTradersHandler = asyncHandler(async (req: Request, res: Response) => {
+    const { name, phone } = req.query;
+    
+    if (!name && !phone) {
+        return res.status(400).json({ message: 'Either name or phone parameter is required' });
+    }
+
+    const nameStr = typeof name === 'string' ? name : undefined;
+    const phoneStr = typeof phone === 'string' ? phone : undefined;
+
+    const result = await searchTraders(nameStr, phoneStr);
+    res.status(200).json(result);
+}, 'Failed to search traders');

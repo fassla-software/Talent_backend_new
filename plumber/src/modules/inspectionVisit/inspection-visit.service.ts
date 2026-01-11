@@ -1,24 +1,24 @@
 import HttpError from '../../utils/HttpError';
 import InspectionVisit from './inspection-visit.model';
-import InspectionRequest from '../inspectionRequest/inspection_request.model';
 import VisitReport from './visit-report.model';
 import User from '../user/user.model';
+import Trader from '../trader/trader.model';
 import { saveImages, viewImages } from '../../utils/imageUtils';
 
 export interface ICheckInData {
-  inspection_request_id: number;
   latitude: number;
   longitude: number;
+  trader_id: number;
 }
 
 export interface ICheckOutData {
-  inspection_request_id: number;
+  inspection_visit_id: number;
   latitude: number;
   longitude: number;
 }
 
 export interface ISubmitVisitReportData {
-  inspection_request_id: number;
+  inspection_visit_id: number;
   // Customer Information
   customer_name: string;
   company_name?: string;
@@ -45,21 +45,15 @@ export interface ISubmitVisitReportData {
 }
 
 /**
- * Check-in for an inspection request
+ * Check-in for an inspection visit
  */
 export const checkIn = async (inspectorId: number, data: ICheckInData) => {
-  const { inspection_request_id, latitude, longitude } = data;
-
-  // Check if inspection request exists
-  const inspectionRequest = await InspectionRequest.findByPk(inspection_request_id);
-  if (!inspectionRequest) {
-    throw new HttpError('Inspection request not found', 404);
-  }
+  const { latitude, longitude, trader_id } = data;
 
   // Check if already checked in
   const existingVisit = await InspectionVisit.findOne({
     where: {
-      inspection_request_id,
+      trader_id,
       inspector_id: inspectorId,
     },
   });
@@ -74,13 +68,14 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
       check_in_at: new Date(),
       check_in_latitude: latitude,
       check_in_longitude: longitude,
+      trader_id: trader_id,
     });
     return existingVisit;
   } else {
     // Create new check-in record
     const visit = await InspectionVisit.create({
-      inspection_request_id,
       inspector_id: inspectorId,
+      trader_id: trader_id,
       check_in_at: new Date(),
       check_in_latitude: latitude,
       check_in_longitude: longitude,
@@ -93,18 +88,18 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
  * Submit visit report form before check-out
  */
 export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitReportData) => {
-  const { inspection_request_id, images, ...visitData } = data;
+  const { images, inspection_visit_id, ...visitData } = data;
 
-  // Check if check-in exists
-  const visit = await InspectionVisit.findOne({
-    where: {
-      inspection_request_id,
-      inspector_id: inspectorId,
-    },
-  });
+  // Find visit by inspection_visit_id
+  const visit = await InspectionVisit.findByPk(inspection_visit_id);
 
   if (!visit) {
-    throw new HttpError('Please check in first before submitting the visit report', 422);
+    throw new HttpError('Inspection visit not found', 404);
+  }
+
+  // Verify the visit belongs to the inspector
+  if (visit.inspector_id !== inspectorId) {
+    throw new HttpError('This inspection visit does not belong to you', 403);
   }
 
   if (!visit.isCheckedIn()) {
@@ -114,6 +109,9 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   if (visit.isCheckedOut()) {
     throw new HttpError('Already checked out. Cannot update visit report', 422);
   }
+
+  // Get trader_id from the visit
+  const traderId = visit.trader_id;
 
   // Save images if provided
   let savedImages: string[] = [];
@@ -125,6 +123,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   const visitReport = await VisitReport.upsert(
     {
       id: visit.report_id || undefined,
+      trader_id: traderId,
       customer_name: visitData.customer_name,
       company_name: visitData.company_name,
       location: visitData.location,
@@ -165,20 +164,24 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
 };
 
 /**
- * Check-out for an inspection request
+ * Check-out for an inspection visit
  */
 export const checkOut = async (inspectorId: number, data: ICheckOutData) => {
-  const { inspection_request_id, latitude, longitude } = data;
+  const { latitude, longitude, inspection_visit_id } = data;
 
-  // Check if check-in exists
-  const visit = await InspectionVisit.findOne({
-    where: {
-      inspection_request_id,
-      inspector_id: inspectorId,
-    },
-  });
+  // Find visit by inspection_visit_id
+  const visit = await InspectionVisit.findByPk(inspection_visit_id);
 
-  if (!visit || !visit.isCheckedIn()) {
+  if (!visit) {
+    throw new HttpError('Inspection visit not found', 404);
+  }
+
+  // Verify the visit belongs to the inspector
+  if (visit.inspector_id !== inspectorId) {
+    throw new HttpError('This inspection visit does not belong to you', 403);
+  }
+
+  if (!visit.isCheckedIn()) {
     throw new HttpError('Please check in first before checking out', 422);
   }
 
@@ -201,12 +204,12 @@ export const checkOut = async (inspectorId: number, data: ICheckOutData) => {
 };
 
 /**
- * Get visit status for an inspection request
+ * Get visit status for an inspection visit
  */
-export const getVisitStatus = async (inspectorId: number, inspection_request_id: number) => {
+export const getVisitStatus = async (inspectorId: number, traderId: number) => {
   const visit = await InspectionVisit.findOne({
     where: {
-      inspection_request_id,
+      trader_id: traderId,
       inspector_id: inspectorId,
     },
     include: [
@@ -265,9 +268,9 @@ export const getEnvoyVisits = async (inspectorId: number) => {
     },
     include: [
       {
-        model: InspectionRequest,
-        as: 'inspectionRequest',
-        attributes: ['user_name', 'address', 'inspection_date'],
+        model: Trader,
+        as: 'trader',
+        attributes: ['id', 'city', 'area'],
       },
       {
         model: VisitReport,
@@ -280,10 +283,10 @@ export const getEnvoyVisits = async (inspectorId: number) => {
 
   return visits.map(visit => ({
     id: visit.id,
-    customer_name: visit.inspectionRequest?.user_name,
+    trader_id: visit.trader_id,
+    trader_city: visit.trader?.city,
+    trader_area: visit.trader?.area,
     company_name: visit.visitReport?.company_name || null,
-    date: visit.inspectionRequest?.inspection_date,
-    location: visit.inspectionRequest?.address,
     visit_result: visit.visitReport?.visit_result || null,
     status: visit.status,
   }));
@@ -298,9 +301,9 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
   const { count, rows: visits } = await InspectionVisit.findAndCountAll({
     include: [
       {
-        model: InspectionRequest,
-        as: 'inspectionRequest',
-        attributes: ['user_name', 'address', 'inspection_date', 'user_phone'],
+        model: Trader,
+        as: 'trader',
+        attributes: ['id', 'city', 'area'],
         required: false,
       },
       {
@@ -324,10 +327,10 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
   return {
     visits: visits.map(visit => ({
       id: visit.id,
-      customer_name: visit.inspectionRequest?.user_name,
+      trader_id: visit.trader_id,
+      trader_city: visit.trader?.city,
+      trader_area: visit.trader?.area,
       company_name: visit.visitReport?.company_name || null,
-      date: visit.inspectionRequest?.inspection_date,
-      location: visit.inspectionRequest?.address,
       inspector_name: visit.inspector?.name,
       inspector_phone: visit.inspector?.phone,
       visit_result: visit.visitReport?.visit_result || null,
@@ -351,8 +354,8 @@ export const getAdminVisitDetails = async (visitId: number) => {
   const visit = await InspectionVisit.findByPk(visitId, {
     include: [
       {
-        model: InspectionRequest,
-        as: 'inspectionRequest',
+        model: Trader,
+        as: 'trader',
         required: false,
       },
       {
