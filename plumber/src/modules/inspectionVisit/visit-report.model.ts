@@ -1,8 +1,10 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/db';
+import Trader from '../trader/trader.model';
 
 class VisitReport extends Model {
   public id!: number;
+  public trader_id?: number | null;
   // Customer Information (معلومات العميل)
   public customer_name!: string;
   public company_name?: string | null;
@@ -34,6 +36,9 @@ class VisitReport extends Model {
 
   public createdAt!: Date;
   public updatedAt!: Date;
+
+  // Relations
+  public trader?: Trader;
 }
 
 VisitReport.init(
@@ -42,6 +47,16 @@ VisitReport.init(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+    },
+    trader_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'traders',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
     },
     customer_name: {
       type: DataTypes.STRING(255),
@@ -134,6 +149,17 @@ VisitReport.init(
     underscored: true,
   },
 );
+
+// Associations
+VisitReport.belongsTo(Trader, {
+  foreignKey: 'trader_id',
+  as: 'trader',
+});
+
+Trader.hasMany(VisitReport, {
+  foreignKey: 'trader_id',
+  as: 'visitReports',
+});
 
 export default VisitReport;
 
