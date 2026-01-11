@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
 import Trader, { TraderStatus } from './trader.model';
 import User from '../user/user.model';
 import HttpError from '../../utils/HttpError';
 import { IUpdatePlumber } from '../plumber/dto/update-plumber.dto';
 import { saveImages, viewImages } from '../../utils/imageUtils';
-import { Sequelize } from 'sequelize';
 import { PlumberStatus } from '../plumber/plumber.model';
 
 export const getTraderById = async (userId: number) => {
@@ -181,4 +181,48 @@ export const updateProfile = async (token: string, newTrader: IUpdatePlumber) =>
     const userId = payload.id;
 
     return await updateTrader(userId, newTrader);
+};
+
+export const searchTraders = async (name?: string, phone?: string) => {
+    const whereConditions: any = {};
+
+    if (name || phone) {
+        const userConditions: any[] = [];
+        
+        if (name) {
+            userConditions.push({ '$user.name$': { [Op.like]: `%${name}%` } });
+        }
+        
+        if (phone) {
+            userConditions.push({ '$user.phone$': { [Op.like]: `%${phone}%` } });
+        }
+
+        if (userConditions.length > 0) {
+            whereConditions[Op.or] = userConditions;
+        }
+    }
+
+    const result = await Trader.findAndCountAll({
+        where: whereConditions,
+        include: [
+            {
+                model: User,
+                as: 'user',
+                required: true,
+            },
+        ],
+    });
+
+    const { rows, count } = result;
+
+    return {
+        total_trader: count,
+        traders: rows.map((trader) => {
+            const traderData = trader.toJSON();
+            return {
+                ...traderData,
+                image: traderData.image ? (viewImages(traderData.image) as string) : '',
+            };
+        }),
+    };
 };
