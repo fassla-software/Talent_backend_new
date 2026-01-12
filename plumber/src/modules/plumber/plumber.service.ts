@@ -390,6 +390,10 @@ export const loginPlumber = async (data: ILoginPlumber) => {
       const envoySetting = await EnvoySetting.findOne({ where: { user_id: user.id } });
       return { token, user: { ...user.toJSON(), role, envoySetting } };
     }
+    if (role === Roles.TRADER) {
+      if (user.status === PlumberStatus.PENDING) throw new HttpError('trader not approved yet', 401);
+      if (user.status === PlumberStatus.REJECTED) throw new HttpError('trader rejected', 401);
+    }
     return { token, user: { ...user.toJSON(), role } };
   }
 

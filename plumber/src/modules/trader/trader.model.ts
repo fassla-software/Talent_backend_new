@@ -7,9 +7,18 @@ export enum TraderStatus {
     APPROVED = 'APPROVED',
     REJECTED = 'REJECTED',
 }
+
+export enum TraderActivityStatus {
+    ACTIVE = 'ACTIVE',           // نشط
+    INACTIVE = 'INACTIVE',       // غير نشط
+    DORMANT = 'DORMANT',         // خامل
+    PENDING = 'PENDING',         // محتمل
+}
 interface TraderAttributes {
     id: number;
     user_id: number;
+    inspector_id?: number | null;
+    status: TraderActivityStatus;
     city: string;
     area: string;
     nationality_id?: string;
@@ -25,6 +34,7 @@ interface TraderAttributes {
     createdAt: Date;
     updatedAt: Date;
     user?: User;
+    inspector?: User;
 }
 
 interface TraderCreationAttributes
@@ -40,11 +50,14 @@ interface TraderCreationAttributes
         | 'instant_withdrawal'
         | 'image'
         | 'withdraw_money'
+        | 'inspector_id'
+        | 'status'
     > { }
 
 class Trader extends Model<TraderAttributes, TraderCreationAttributes> {
     public id!: number;
     public user_id!: number;
+    public inspector_id?: number | null;
     public city!: string;
     public area!: string;
     public nationality_id?: string;
@@ -52,6 +65,7 @@ class Trader extends Model<TraderAttributes, TraderCreationAttributes> {
     public nationality_image2?: string;
     public image?: string;
     public is_verified!: boolean;
+    public status!: TraderActivityStatus;
     public otp?: string | null;
     public expiration_date?: Date | null;
     public createdAt!: Date;
@@ -62,6 +76,7 @@ class Trader extends Model<TraderAttributes, TraderCreationAttributes> {
 
     // Define the association explicitly
     public user?: User;
+    public inspector?: User;
 }
 
 // Initialize the model
@@ -76,10 +91,25 @@ Trader.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'users', 
+                model: 'users',
                 key: 'id',
             },
             onDelete: 'CASCADE',
+        },
+        inspector_id: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            allowNull: true,
+            references: {
+                model: 'users',
+                key: 'id',
+            },
+            onDelete: 'SET NULL',
+            onUpdate: 'CASCADE',
+        },
+        status: {
+            type: DataTypes.ENUM(...Object.values(TraderActivityStatus)),
+            allowNull: false,
+            defaultValue: TraderActivityStatus.PENDING,
         },
         city: {
             type: DataTypes.STRING,
@@ -153,6 +183,7 @@ Trader.init(
 );
 
 Trader.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Trader.belongsTo(User, { foreignKey: 'inspector_id', as: 'inspector' });
 User.hasMany(Trader, { foreignKey: 'user_id', as: 'traders' });
 
 export default Trader;
