@@ -13,10 +13,23 @@ export const checkInValidation = [
     .notEmpty()
     .withMessage('longitude is required'),
   body('trader_id')
+    .optional()
     .isInt()
-    .withMessage('trader_id must be a number')
-    .notEmpty()
-    .withMessage('trader_id is required'),
+    .withMessage('trader_id must be a number'),
+  body('plumber_id')
+    .optional()
+    .isInt()
+    .withMessage('plumber_id must be a number'),
+  body()
+    .custom((value, { req }) => {
+      if (!req.body.trader_id && !req.body.plumber_id) {
+        throw new Error('Either trader_id or plumber_id is required');
+      }
+      if (req.body.trader_id && req.body.plumber_id) {
+        throw new Error('Cannot provide both trader_id and plumber_id');
+      }
+      return true;
+    }),
   handleValidationErrors,
   strict,
 ];
@@ -82,46 +95,46 @@ export const submitVisitReportValidation = [
     .optional()
     .custom((value, { req }) => {
       if (!value) return true; // Allow empty/undefined
-      
+
       // Accept format: M/D/YYYY (month/day/year)
       const datePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
       const match = String(value).match(datePattern);
-      
+
       if (!match) {
         throw new Error('planned_purchase_date must be in format M/D/YYYY (month/day/year)');
       }
-      
+
       const month = parseInt(match[1], 10);
       const day = parseInt(match[2], 10);
       const year = parseInt(match[3], 10);
-      
+
       // Validate month (1-12)
       if (month < 1 || month > 12) {
         throw new Error('Month must be between 1 and 12');
       }
-      
+
       // Validate day (1-31, basic check)
       if (day < 1 || day > 31) {
         throw new Error('Day must be between 1 and 31');
       }
-      
+
       // Validate year (reasonable range)
       if (year < 1900 || year > 2100) {
         throw new Error('Year must be between 1900 and 2100');
       }
-      
+
       // Create date object to validate actual date (handles invalid dates like 2/30/2026)
       const date = new Date(year, month - 1, day);
       if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
         throw new Error('Invalid date');
       }
-      
+
       // Convert to ISO8601 format (YYYY-MM-DD) and update request body
       const monthStr = String(month).padStart(2, '0');
       const dayStr = String(day).padStart(2, '0');
       const isoDate = `${year}-${monthStr}-${dayStr}`;
       req.body.planned_purchase_date = isoDate;
-      
+
       return true;
     }),
   body('outcome_classification').optional().isString().withMessage('outcome_classification must be a string'),

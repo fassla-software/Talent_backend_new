@@ -3,6 +3,7 @@ import sequelize from '../../config/db';
 import User from '../user/user.model';
 import VisitReport from './visit-report.model';
 import Trader from '../trader/trader.model';
+import Plumber from '../plumber/plumber.model';
 
 export enum VisitStatus {
   PENDING = 'PENDING',
@@ -14,6 +15,7 @@ class InspectionVisit extends Model {
   public id!: number;
   public inspector_id!: number;
   public trader_id?: number | null;
+  public plumber_id?: number | null;
   public report_id?: number | null;
   public status!: VisitStatus;
   public check_in_at?: Date | null;
@@ -28,6 +30,7 @@ class InspectionVisit extends Model {
   // Relations
   public inspector?: User;
   public trader?: Trader;
+  public plumber?: Plumber;
   public visitReport?: VisitReport;
 
   // Helper methods
@@ -64,6 +67,16 @@ InspectionVisit.init(
       allowNull: true,
       references: {
         model: 'traders',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
+    },
+    plumber_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+      references: {
+        model: 'plumbers',
         key: 'id',
       },
       onDelete: 'SET NULL',
@@ -128,6 +141,16 @@ InspectionVisit.belongsTo(Trader, {
 
 Trader.hasMany(InspectionVisit, {
   foreignKey: 'trader_id',
+  as: 'inspectionVisits',
+});
+
+InspectionVisit.belongsTo(Plumber, {
+  foreignKey: 'plumber_id',
+  as: 'plumber',
+});
+
+Plumber.hasMany(InspectionVisit, {
+  foreignKey: 'plumber_id',
   as: 'inspectionVisits',
 });
 

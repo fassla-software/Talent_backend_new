@@ -2,13 +2,15 @@ import HttpError from '../../utils/HttpError';
 import InspectionVisit from './inspection-visit.model';
 import VisitReport from './visit-report.model';
 import User from '../user/user.model';
-import Trader from '../trader/trader.model';
+import Trader, { TraderActivityStatus } from '../trader/trader.model';
+import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
 import { saveImages, viewImages } from '../../utils/imageUtils';
 
 export interface ICheckInData {
   latitude: number;
   longitude: number;
-  trader_id: number;
+  trader_id?: number;
+  plumber_id?: number;
 }
 
 export interface ICheckOutData {
@@ -48,12 +50,13 @@ export interface ISubmitVisitReportData {
  * Check-in for an inspection visit
  */
 export const checkIn = async (inspectorId: number, data: ICheckInData) => {
-  const { latitude, longitude, trader_id } = data;
+  const { latitude, longitude, trader_id, plumber_id } = data;
 
   // Check if already checked in
   const existingVisit = await InspectionVisit.findOne({
     where: {
-      trader_id,
+      ...(trader_id ? { trader_id } : {}),
+      ...(plumber_id ? { plumber_id } : {}),
       inspector_id: inspectorId,
     },
   });
@@ -68,14 +71,16 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
       check_in_at: new Date(),
       check_in_latitude: latitude,
       check_in_longitude: longitude,
-      trader_id: trader_id,
+      trader_id: trader_id || null,
+      plumber_id: plumber_id || null,
     });
     return existingVisit;
   } else {
     // Create new check-in record
     const visit = await InspectionVisit.create({
       inspector_id: inspectorId,
-      trader_id: trader_id,
+      trader_id: trader_id || null,
+      plumber_id: plumber_id || null,
       check_in_at: new Date(),
       check_in_latitude: latitude,
       check_in_longitude: longitude,
@@ -110,8 +115,25 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     throw new HttpError('Already checked out. Cannot update visit report', 422);
   }
 
-  // Get trader_id from the visit
+  // Get trader_id or plumber_id from the visit
   const traderId = visit.trader_id;
+  const plumberId = visit.plumber_id;
+
+  // Update trader status if sales_value is present
+  if (visitData.sales_value && traderId) {
+    const trader = await Trader.findByPk(traderId);
+    if (trader && trader.status !== TraderActivityStatus.ACTIVE) {
+      await trader.update({ status: TraderActivityStatus.ACTIVE });
+    }
+  }
+
+  // Update plumber status if sales_value is present
+  if (visitData.sales_value && plumberId) {
+    const plumber = await Plumber.findByPk(plumberId);
+    if (plumber && plumber.status !== PlumberAccountStatus.ACTIVE) {
+      await plumber.update({ status: PlumberAccountStatus.ACTIVE });
+    }
+  }
 
   // Save images if provided
   let savedImages: string[] = [];
@@ -123,7 +145,8 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   const visitReport = await VisitReport.upsert(
     {
       id: visit.report_id || undefined,
-      trader_id: traderId,
+      trader_id: traderId || undefined,
+      plumber_id: plumberId || undefined,
       customer_name: visitData.customer_name,
       company_name: visitData.company_name,
       location: visitData.location,
@@ -206,10 +229,11 @@ export const checkOut = async (inspectorId: number, data: ICheckOutData) => {
 /**
  * Get visit status for an inspection visit
  */
-export const getVisitStatus = async (inspectorId: number, traderId: number) => {
+export const getVisitStatus = async (inspectorId: number, traderId?: number, plumberId?: number) => {
   const visit = await InspectionVisit.findOne({
     where: {
-      trader_id: traderId,
+      ...(traderId ? { trader_id: traderId } : {}),
+      ...(plumberId ? { plumber_id: plumberId } : {}),
       inspector_id: inspectorId,
     },
     include: [
@@ -241,17 +265,17 @@ export const getVisitStatus = async (inspectorId: number, traderId: number) => {
     has_report: visit.hasVisitReport(),
     check_in: visit.isCheckedIn()
       ? {
-          check_in_at: visit.check_in_at,
-          latitude: visit.check_in_latitude,
-          longitude: visit.check_in_longitude,
-        }
+        check_in_at: visit.check_in_at,
+        latitude: visit.check_in_latitude,
+        longitude: visit.check_in_longitude,
+      }
       : null,
     check_out: visit.isCheckedOut()
       ? {
-          check_out_at: visit.check_out_at,
-          latitude: visit.check_out_latitude,
-          longitude: visit.check_out_longitude,
-        }
+        check_out_at: visit.check_out_at,
+        latitude: visit.check_out_latitude,
+        longitude: visit.check_out_longitude,
+      }
       : null,
     visit_report: visitObject.visitReport,
   };
@@ -271,6 +295,13 @@ export const getEnvoyVisits = async (inspectorId: number) => {
         model: Trader,
         as: 'trader',
         attributes: ['id', 'city', 'area'],
+        required: false,
+      },
+      {
+        model: Plumber,
+        as: 'plumber',
+        attributes: ['id', 'city', 'area'],
+        required: false,
       },
       {
         model: VisitReport,
@@ -284,8 +315,11 @@ export const getEnvoyVisits = async (inspectorId: number) => {
   return visits.map(visit => ({
     id: visit.id,
     trader_id: visit.trader_id,
+    plumber_id: visit.plumber_id,
     trader_city: visit.trader?.city,
     trader_area: visit.trader?.area,
+    plumber_city: visit.plumber?.city,
+    plumber_area: visit.plumber?.area,
     company_name: visit.visitReport?.company_name || null,
     visit_result: visit.visitReport?.visit_result || null,
     status: visit.status,
@@ -297,12 +331,18 @@ export const getEnvoyVisits = async (inspectorId: number) => {
  */
 export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
   const offset = (page - 1) * limit;
-  
+
   const { count, rows: visits } = await InspectionVisit.findAndCountAll({
     include: [
       {
         model: Trader,
         as: 'trader',
+        attributes: ['id', 'city', 'area'],
+        required: false,
+      },
+      {
+        model: Plumber,
+        as: 'plumber',
         attributes: ['id', 'city', 'area'],
         required: false,
       },
@@ -328,8 +368,11 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
     visits: visits.map(visit => ({
       id: visit.id,
       trader_id: visit.trader_id,
+      plumber_id: visit.plumber_id,
       trader_city: visit.trader?.city,
       trader_area: visit.trader?.area,
+      plumber_city: visit.plumber?.city,
+      plumber_area: visit.plumber?.area,
       company_name: visit.visitReport?.company_name || null,
       inspector_name: visit.inspector?.name,
       inspector_phone: visit.inspector?.phone,
@@ -337,6 +380,7 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
       status: visit.status,
       check_in_at: visit.check_in_at,
       check_out_at: visit.check_out_at,
+      date: visit.createdAt,
     })),
     pagination: {
       total: count,
@@ -356,6 +400,11 @@ export const getAdminVisitDetails = async (visitId: number) => {
       {
         model: Trader,
         as: 'trader',
+        required: false,
+      },
+      {
+        model: Plumber,
+        as: 'plumber',
         required: false,
       },
       {
@@ -389,7 +438,7 @@ export const getAdminVisitDetails = async (visitId: number) => {
  */
 export const updateVisitStatus = async (visitId: number, status: string) => {
   const visit = await InspectionVisit.findByPk(visitId);
-  
+
   if (!visit) {
     throw new HttpError('Visit not found', 404);
   }
