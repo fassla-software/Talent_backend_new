@@ -2,6 +2,7 @@
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import Trader, { TraderStatus } from './trader.model';
+import Plumber from '../plumber/plumber.model';
 import User from '../user/user.model';
 import HttpError from '../../utils/HttpError';
 import { IUpdatePlumber } from '../plumber/dto/update-plumber.dto';
@@ -183,16 +184,22 @@ export const updateProfile = async (token: string, newTrader: IUpdatePlumber) =>
     return await updateTrader(userId, newTrader);
 };
 
-export const searchTraders = async (name?: string, phone?: string) => {
+export const searchTraders = async (name?: string, phone?: string, city?: string) => {
     const whereConditions: any = {};
+
+    if (city) {
+        whereConditions.city = city;
+    }
 
     if (name || phone) {
         const userConditions: any[] = [];
-        
+
         if (name) {
+            // Using Op.like for case-insensitive search in MySQL (default behavior)
+            // To be explicitly safe for "difference in letters" (case), we can rely on this.
             userConditions.push({ '$user.name$': { [Op.like]: `%${name}%` } });
         }
-        
+
         if (phone) {
             userConditions.push({ '$user.phone$': { [Op.like]: `%${phone}%` } });
         }
@@ -202,27 +209,49 @@ export const searchTraders = async (name?: string, phone?: string) => {
         }
     }
 
-    const result = await Trader.findAndCountAll({
-        where: whereConditions,
-        include: [
-            {
-                model: User,
-                as: 'user',
-                required: true,
-            },
-        ],
+    const [tradersResult, plumbersResult] = await Promise.all([
+        Trader.findAndCountAll({
+            where: whereConditions,
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    required: true,
+                },
+            ],
+        }),
+        Plumber.findAndCountAll({
+            where: whereConditions,
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    required: true,
+                },
+            ],
+        }),
+    ]);
+
+    const traders = tradersResult.rows.map((trader) => {
+        const traderData = trader.toJSON();
+        return {
+            ...traderData,
+            role: 'trader',
+            image: traderData.image ? (viewImages(traderData.image) as string) : '',
+        };
     });
 
-    const { rows, count } = result;
+    const plumbers = plumbersResult.rows.map((plumber) => {
+        const plumberData = plumber.toJSON();
+        return {
+            ...plumberData,
+            role: 'plumber',
+            image: plumberData.image ? (viewImages(plumberData.image) as string) : '',
+        };
+    });
 
     return {
-        total_trader: count,
-        traders: rows.map((trader) => {
-            const traderData = trader.toJSON();
-            return {
-                ...traderData,
-                image: traderData.image ? (viewImages(traderData.image) as string) : '',
-            };
-        }),
+        total: tradersResult.count + plumbersResult.count,
+        results: [...traders, ...plumbers],
     };
 };
