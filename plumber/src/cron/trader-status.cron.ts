@@ -6,8 +6,8 @@ import InspectionVisit from '../modules/inspectionVisit/inspection-visit.model';
 import VisitReport from '../modules/inspectionVisit/visit-report.model';
 
 export const initTraderStatusCron = () => {
-    // Run every minute (for testing)
-    cron.schedule('* * * * *', async () => {
+    // Run every week on Sunday at midnight
+    cron.schedule('0 0 * * 0', async () => {
         console.log('Running trader status update cron job...');
         try {
             const activeTraders = await Trader.findAll({
