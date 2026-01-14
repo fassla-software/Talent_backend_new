@@ -23,6 +23,7 @@ $statusTexts = [
                 <option value="SEND" {{ request('status') == 'SEND' ? 'selected' : '' }}>RECEIVED</option>
                 <option value="ACCEPTED" {{ request('status') == 'ACCEPTED' ? 'selected' : '' }}>INSPECTED</option>
                 <option value="CANCELLED" {{ request('status') == 'CANCELLED' ? 'selected' : '' }}>INADMISSIBLE</option>
+                <option value="PENDING" {{ request('status') == 'PENDING' ? 'selected' : '' }}>PENDING</option>
                 @foreach ($statuses as $status)
                 <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>{{ $status }}</option>
                 @endforeach
@@ -142,6 +143,7 @@ $statusTexts = [
                         {{ $request['status'] === 'REJECTED' ? 'bg-danger' : '' }}
                         {{ $request['status'] === 'ACCEPTED' ? 'bg-success' : '' }}
                         {{ $request['status'] === 'SEND' ? 'bg-info' : '' }}
+                        {{ $request['status'] === 'PENDING' ? 'bg-secondary' : '' }}
                         text-white">
                     {{ $statusTexts[$request['status']] ?? $request['status'] }}
                 </span>
@@ -514,12 +516,17 @@ $statusTexts = [
                     <div class="mb-3"><strong>Inspector ID:</strong> ${requestData.inspector_id || 'N/A'}</div>
                     <div class="mb-3"><strong>Description:</strong> ${requestData.description || 'N/A'}</div>
                     <div class="mb-3"><strong>Comment:</strong> ${requestData.comment || 'N/A'}</div>
+                    <div class="mb-3"><strong>Note:</strong> ${requestData.note || 'N/A'}</div>
                     <div class="mb-3">
                         <strong>Status:</strong>
                         <span class="badge ${
                             requestData.status === 'CANCELLED' ? 'bg-danger' :
                             requestData.status === 'ASSIGNED' ? 'bg-warning' :
-                            requestData.status === 'APPROVED' ? 'bg-success' : 'bg-secondary'
+                            requestData.status === 'APPROVED' ? 'bg-success' :
+                            requestData.status === 'PENDING' ? 'bg-secondary' :
+                            requestData.status === 'ACCEPTED' ? 'bg-success' :
+                            requestData.status === 'SEND' ? 'bg-info' :
+                            requestData.status === 'REJECTED' ? 'bg-danger' : 'bg-secondary'
                         }">
                             ${requestData.status}
                         </span>

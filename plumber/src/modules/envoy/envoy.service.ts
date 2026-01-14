@@ -14,6 +14,8 @@ import RegistrationBonusRule from '../user/registration_bonus.model';
 import { PendingBonus } from '../user/pending-bonus.model';
 import { Op } from 'sequelize';
 import SMSSender from '../../utils/smsSender';
+import { logStatusChange } from '../statusHistory/status-history.service';
+import { ClientType } from '../statusHistory/status-history.model';
 
 export const getEnvoySettingByUserId = async (userId: number) => {
     return await EnvoySetting.findOne({ where: { user_id: userId } });
@@ -88,6 +90,14 @@ export const registerUserByEnvoy = async (
             nationality_image1: nationality_image1 || undefined,
             nationality_image2: nationality_image2 || undefined,
         });
+
+        // Log initial status
+        await logStatusChange(
+            plumber.id,
+            ClientType.PLUMBER,
+            null,
+            PlumberAccountStatus.PENDING
+        );
     } else if (role === Roles.TRADER) {
         trader = await Trader.create({
             user_id: user.id,
@@ -100,6 +110,14 @@ export const registerUserByEnvoy = async (
             nationality_image1: nationality_image1 || undefined,
             nationality_image2: nationality_image2 || undefined,
         });
+
+        // Log initial status
+        await logStatusChange(
+            trader.id,
+            ClientType.TRADER,
+            null,
+            TraderActivityStatus.PENDING
+        );
     }
 
     const assignedRole = await assignRole(user.id, role);

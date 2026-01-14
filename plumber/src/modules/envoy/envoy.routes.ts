@@ -15,4 +15,10 @@ router.post(
     envoyController.registerUserByEnvoyHandler
 );
 
+router.get(
+    '/stats',
+    authenticate,
+    envoyController.getEnvoyStatisticsHandler
+);
+
 export default router;

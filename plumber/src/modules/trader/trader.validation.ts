@@ -1,8 +1,15 @@
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import { strict, handleValidationErrors } from '../../utils/base.validators';
 
 export const paramsValidator = [
     param('id').isInt().withMessage('trader id must be number'),
+    handleValidationErrors,
+    strict,
+];
+
+export const searchValidation = [
+    query('name').optional().isString().withMessage('Name must be a string'),
+    query('phone').optional().isString().withMessage('Phone must be a string'),
     handleValidationErrors,
     strict,
 ];

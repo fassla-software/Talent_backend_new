@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import HttpError from '../../utils/HttpError';
 import InspectionVisit from './inspection-visit.model';
 import VisitReport from './visit-report.model';
@@ -7,6 +8,8 @@ import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
 import { saveImages, viewImages } from '../../utils/imageUtils';
 import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspection_request.model';
 import InspectionRequestItem from '../inspectionRequest/inspection_request-items.model';
+import { logStatusChange } from '../statusHistory/status-history.service';
+import { ClientType } from '../statusHistory/status-history.model';
 
 export interface ICheckInData {
   latitude: number;
@@ -121,19 +124,89 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   const traderId = visit.trader_id;
   const plumberId = visit.plumber_id;
 
-  // Update trader status if sales_value is present
-  if (visitData.sales_value && traderId) {
-    const trader = await Trader.findByPk(traderId);
-    if (trader && trader.status !== TraderActivityStatus.ACTIVE) {
-      await trader.update({ status: TraderActivityStatus.ACTIVE });
-    }
-  }
+  // Get customer data from trader_id or plumber_id instead of body
+  let customerName = visitData.customer_name;
+  let customerPhone = visitData.phone;
+  let customerNationalityId = '';
 
-  // Update plumber status if sales_value is present
-  if (visitData.sales_value && plumberId) {
-    const plumber = await Plumber.findByPk(plumberId);
-    if (plumber && plumber.status !== PlumberAccountStatus.ACTIVE) {
+  if (traderId) {
+    const trader = await Trader.findByPk(traderId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name', 'phone'],
+        },
+      ],
+    });
+
+    if (!trader) {
+      throw new HttpError('Trader not found', 404);
+    }
+
+    if (!trader.user) {
+      throw new HttpError('Trader user data not found', 404);
+    }
+
+    // Use trader user data instead of body data
+    customerName = trader.user.name;
+    customerPhone = trader.user.phone;
+    customerNationalityId = trader.nationality_id || ''; // Get from trader, not user
+
+    // Update trader status if sales_value is present
+    if (visitData.sales_value && trader.status !== TraderActivityStatus.ACTIVE) {
+      const oldStatus = trader.status;
+      await trader.update({ status: TraderActivityStatus.ACTIVE });
+
+      // Log status change
+      await logStatusChange(
+        trader.id,
+        ClientType.TRADER,
+        oldStatus,
+        TraderActivityStatus.ACTIVE
+      );
+    }
+  } else if (plumberId) {
+    const plumber = await Plumber.findByPk(plumberId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name', 'phone'],
+        },
+      ],
+    });
+
+    if (!plumber) {
+      throw new HttpError('Plumber not found', 404);
+    }
+
+    if (!plumber.user) {
+      throw new HttpError('Plumber user data not found', 404);
+    }
+
+    // Use plumber user data instead of body data
+    customerName = plumber.user.name;
+    customerPhone = plumber.user.phone;
+    customerNationalityId = plumber.nationality_id || ''; // Get from plumber, not user
+
+    // Update plumber status if sales_value is present
+    if (visitData.sales_value && plumber.status !== PlumberAccountStatus.ACTIVE) {
+      const oldStatus = plumber.status;
       await plumber.update({ status: PlumberAccountStatus.ACTIVE });
+
+      // Log status change
+      await logStatusChange(
+        plumber.id,
+        ClientType.PLUMBER,
+        oldStatus,
+        PlumberAccountStatus.ACTIVE
+      );
+    }
+  } else {
+    // If no trader_id or plumber_id, customer_name and phone must be provided in body
+    if (!visitData.customer_name || !visitData.phone) {
+      throw new HttpError('customer_name and phone are required when trader_id or plumber_id is not provided', 400);
     }
   }
 
@@ -149,11 +222,11 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       id: visit.report_id || undefined,
       trader_id: traderId || undefined,
       plumber_id: plumberId || undefined,
-      customer_name: visitData.customer_name,
+      customer_name: customerName, // Use data from trader instead of body
       company_name: visitData.company_name,
       location: visitData.location,
       region_province: visitData.region_province,
-      phone: visitData.phone,
+      phone: customerPhone, // Use data from trader instead of body
       email: visitData.email,
       client_type: visitData.client_type,
       visit_type: visitData.visit_type,
@@ -201,14 +274,14 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     const inspectionRequest = await InspectionRequest.create({
       requestor_id: requestorUserId,
       inspector_id: inspectorId,
-      user_name: visitData.customer_name,
-      user_phone: visitData.phone,
-      nationality_id: '',
+      user_name: customerName, // Use data from trader instead of body
+      user_phone: customerPhone, // Use data from trader instead of body
+      nationality_id: customerNationalityId,
       area: area,
       city: city,
       address: visitData.location,
-      seller_name: visitData.company_name || visitData.customer_name,
-      seller_phone: visitData.phone,
+      seller_name: visitData.company_name || customerName,
+      seller_phone: customerPhone,
       certificate_id: '',
       inspection_date: new Date(),
       description: visitData.next_action,
@@ -216,6 +289,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       status: RequestStatus.ASSIGNED,
       user_lat: visit.check_in_latitude ? Number(visit.check_in_latitude) : 0,
       user_long: visit.check_in_longitude ? Number(visit.check_in_longitude) : 0,
+      visit_report_id: report.id, // Link to visit report for identification
     });
 
     // Note: items are optional for requests created from visit reports
@@ -488,5 +562,118 @@ export const updateVisitStatus = async (visitId: number, status: string) => {
 
   await visit.update({ status });
   return visit;
+};
+
+/**
+ * Get weekly statistics for envoy
+ * Week runs from Saturday to Friday
+ */
+export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
+  const now = new Date();
+
+  // Helper function to get Saturday of a given week
+  const getSaturday = (date: Date, offset: number = 0): Date => {
+    const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+    const diff = day === 6 ? offset * 7 : (day + 1 + offset * 7);
+    const saturday = new Date(date);
+    saturday.setDate(date.getDate() - diff);
+    saturday.setHours(0, 0, 0, 0);
+    return saturday;
+  };
+
+  // Get this week's Saturday (start of current week)
+  const thisWeekStart = getSaturday(now, 0);
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // Friday
+  thisWeekEnd.setHours(23, 59, 59, 999);
+
+  // Get last week's Saturday (start of previous week)
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+  const lastWeekEnd = new Date(lastWeekStart);
+  lastWeekEnd.setDate(lastWeekStart.getDate() + 6); // Friday
+  lastWeekEnd.setHours(23, 59, 59, 999);
+
+  // Count visits for this week (completed visits only - those with check_out_at)
+  const thisWeekVisitsCount = await InspectionVisit.count({
+    where: {
+      inspector_id: inspectorId,
+      check_out_at: {
+        [Op.between]: [thisWeekStart, thisWeekEnd],
+      },
+    },
+  });
+
+  // Count visits for last week
+  const lastWeekVisitsCount = await InspectionVisit.count({
+    where: {
+      inspector_id: inspectorId,
+      check_out_at: {
+        [Op.between]: [lastWeekStart, lastWeekEnd],
+      },
+    },
+  });
+
+  // Calculate progress
+  let progressPercentage = 0;
+  let trend: 'up' | 'down' | 'stable' = 'stable';
+  const difference = thisWeekVisitsCount - lastWeekVisitsCount;
+
+  if (lastWeekVisitsCount > 0) {
+    progressPercentage = Number((((thisWeekVisitsCount - lastWeekVisitsCount) / lastWeekVisitsCount) * 100).toFixed(2));
+  } else if (thisWeekVisitsCount > 0) {
+    // If last week was 0, show 100% increase if there are visits this week
+    progressPercentage = 100;
+  }
+
+  if (difference > 0) {
+    trend = 'up';
+  } else if (difference < 0) {
+    trend = 'down';
+  }
+
+  // Count active traders
+  const activeTraders = await Trader.count({
+    where: {
+      inspector_id: inspectorId,
+      status: TraderActivityStatus.ACTIVE,
+    },
+  });
+
+  // Count active plumbers
+  const activePlumbers = await Plumber.count({
+    where: {
+      inspector_id: inspectorId,
+      status: PlumberAccountStatus.ACTIVE,
+    },
+  });
+
+  // Format dates for response
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  return {
+    this_week: {
+      visits_count: thisWeekVisitsCount,
+      start_date: formatDate(thisWeekStart),
+      end_date: formatDate(thisWeekEnd),
+    },
+    last_week: {
+      visits_count: lastWeekVisitsCount,
+      start_date: formatDate(lastWeekStart),
+      end_date: formatDate(lastWeekEnd),
+    },
+    progress: {
+      percentage: progressPercentage,
+      difference,
+      trend,
+    },
+    active_clients: {
+      traders: activeTraders,
+      plumbers: activePlumbers,
+      total: activeTraders + activePlumbers,
+    },
+  };
 };
 

@@ -11,13 +11,13 @@ import {
     searchTradersHandler
 } from './trader.controller';
 import { paramsValidator } from '../plumber/plumber.validation';
-import { bulkDeleteValidation } from './trader.validation';
+import { bulkDeleteValidation, searchValidation } from './trader.validation';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { Roles } from '../role/role.model';
 
 const router = express.Router();
 
-router.get('/search', authenticate, authorize(Roles.Envoy), searchTradersHandler);
+router.get('/search', authenticate, authorize(Roles.Envoy), searchValidation, searchTradersHandler);
 router.get('/', getTradersHandler);
 router.get('/profile', authenticate, getProfileHandler);
 router.get('/:id', paramsValidator, getTraderByIdHandler);
