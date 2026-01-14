@@ -9,6 +9,8 @@ import {
   getInspectorRequestsHandler,
   approveInspectionRequestHandler,
   bulkDeleteInspectionRequestsHandler,
+  pendingInspectionRequestHandler,
+  getInspectorPendingRequestsHandler,
 } from './inspection_request.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -19,6 +21,7 @@ import {
   checkRequestVal,
   filterVal,
   paramsValidator,
+  pendingRequestVal,
 } from './inspect-request.validation';
 import { Roles } from '../role/role.model';
 
@@ -55,6 +58,8 @@ router.post(
 //inspector
 router.put('/assign', assignRequestVal, assignInspectionRequestHandler);
 router.put('/check', authenticate, authorize(Roles.Envoy), checkRequestVal, checkInspectionRequestHandler);
+router.put('/pending', authenticate, authorize(Roles.Envoy), pendingRequestVal, pendingInspectionRequestHandler);
+router.get('/pending', authenticate, authorize(Roles.Envoy), filterVal, getInspectorPendingRequestsHandler);
 router.put('/approve', approveRequestVal, approveInspectionRequestHandler);
 
 export default router;
