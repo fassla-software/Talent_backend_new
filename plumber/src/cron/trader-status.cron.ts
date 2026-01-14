@@ -4,6 +4,8 @@ import Trader, { TraderActivityStatus } from '../modules/trader/trader.model';
 import Plumber, { PlumberAccountStatus } from '../modules/plumber/plumber.model';
 import InspectionVisit from '../modules/inspectionVisit/inspection-visit.model';
 import VisitReport from '../modules/inspectionVisit/visit-report.model';
+import { logStatusChange } from '../modules/statusHistory/status-history.service';
+import { ClientType } from '../modules/statusHistory/status-history.model';
 
 export const initTraderStatusCron = () => {
     // Run every week on Sunday at midnight
@@ -51,11 +53,25 @@ export const initTraderStatusCron = () => {
 
                 if (diffDays > 60) {
                     // More than 2 months (approx 60 days) -> DORMANT
+                    const oldStatus = trader.status;
                     await trader.update({ status: TraderActivityStatus.DORMANT });
+                    await logStatusChange(
+                        trader.id,
+                        ClientType.TRADER,
+                        oldStatus,
+                        TraderActivityStatus.DORMANT
+                    );
                     console.log(`Trader ${trader.id} status updated to DORMANT`);
                 } else if (diffDays > 30) {
                     // More than 1 month (approx 30 days) -> INACTIVE
+                    const oldStatus = trader.status;
                     await trader.update({ status: TraderActivityStatus.INACTIVE });
+                    await logStatusChange(
+                        trader.id,
+                        ClientType.TRADER,
+                        oldStatus,
+                        TraderActivityStatus.INACTIVE
+                    );
                     console.log(`Trader ${trader.id} status updated to INACTIVE`);
                 }
             }
@@ -102,10 +118,24 @@ export const initTraderStatusCron = () => {
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 if (diffDays > 60) {
+                    const oldStatus = plumber.status;
                     await plumber.update({ status: PlumberAccountStatus.DORMANT });
+                    await logStatusChange(
+                        plumber.id,
+                        ClientType.PLUMBER,
+                        oldStatus,
+                        PlumberAccountStatus.DORMANT
+                    );
                     console.log(`Plumber ${plumber.id} status updated to DORMANT`);
                 } else if (diffDays > 30) {
+                    const oldStatus = plumber.status;
                     await plumber.update({ status: PlumberAccountStatus.INACTIVE });
+                    await logStatusChange(
+                        plumber.id,
+                        ClientType.PLUMBER,
+                        oldStatus,
+                        PlumberAccountStatus.INACTIVE
+                    );
                     console.log(`Plumber ${plumber.id} status updated to INACTIVE`);
                 }
             }

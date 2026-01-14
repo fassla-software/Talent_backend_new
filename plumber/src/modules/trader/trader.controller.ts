@@ -70,10 +70,6 @@ export const updateProfileHandler = asyncHandler(async (req: Request, res: Respo
 export const searchTradersHandler = asyncHandler(async (req: any, res: Response) => {
     const { name, phone } = req.query;
 
-    if (!name && !phone) {
-        return res.status(400).json({ message: 'Either name or phone parameter is required' });
-    }
-
     let city: string | undefined;
 
     // Middleware guarantees user is authenticated and is an envoy

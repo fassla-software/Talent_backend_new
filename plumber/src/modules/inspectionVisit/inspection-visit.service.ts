@@ -8,6 +8,8 @@ import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
 import { saveImages, viewImages } from '../../utils/imageUtils';
 import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspection_request.model';
 import InspectionRequestItem from '../inspectionRequest/inspection_request-items.model';
+import { logStatusChange } from '../statusHistory/status-history.service';
+import { ClientType } from '../statusHistory/status-history.model';
 
 export interface ICheckInData {
   latitude: number;
@@ -122,19 +124,89 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   const traderId = visit.trader_id;
   const plumberId = visit.plumber_id;
 
-  // Update trader status if sales_value is present
-  if (visitData.sales_value && traderId) {
-    const trader = await Trader.findByPk(traderId);
-    if (trader && trader.status !== TraderActivityStatus.ACTIVE) {
-      await trader.update({ status: TraderActivityStatus.ACTIVE });
-    }
-  }
+  // Get customer data from trader_id or plumber_id instead of body
+  let customerName = visitData.customer_name;
+  let customerPhone = visitData.phone;
+  let customerNationalityId = '';
 
-  // Update plumber status if sales_value is present
-  if (visitData.sales_value && plumberId) {
-    const plumber = await Plumber.findByPk(plumberId);
-    if (plumber && plumber.status !== PlumberAccountStatus.ACTIVE) {
+  if (traderId) {
+    const trader = await Trader.findByPk(traderId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name', 'phone'],
+        },
+      ],
+    });
+
+    if (!trader) {
+      throw new HttpError('Trader not found', 404);
+    }
+
+    if (!trader.user) {
+      throw new HttpError('Trader user data not found', 404);
+    }
+
+    // Use trader user data instead of body data
+    customerName = trader.user.name;
+    customerPhone = trader.user.phone;
+    customerNationalityId = trader.nationality_id || ''; // Get from trader, not user
+
+    // Update trader status if sales_value is present
+    if (visitData.sales_value && trader.status !== TraderActivityStatus.ACTIVE) {
+      const oldStatus = trader.status;
+      await trader.update({ status: TraderActivityStatus.ACTIVE });
+
+      // Log status change
+      await logStatusChange(
+        trader.id,
+        ClientType.TRADER,
+        oldStatus,
+        TraderActivityStatus.ACTIVE
+      );
+    }
+  } else if (plumberId) {
+    const plumber = await Plumber.findByPk(plumberId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name', 'phone'],
+        },
+      ],
+    });
+
+    if (!plumber) {
+      throw new HttpError('Plumber not found', 404);
+    }
+
+    if (!plumber.user) {
+      throw new HttpError('Plumber user data not found', 404);
+    }
+
+    // Use plumber user data instead of body data
+    customerName = plumber.user.name;
+    customerPhone = plumber.user.phone;
+    customerNationalityId = plumber.nationality_id || ''; // Get from plumber, not user
+
+    // Update plumber status if sales_value is present
+    if (visitData.sales_value && plumber.status !== PlumberAccountStatus.ACTIVE) {
+      const oldStatus = plumber.status;
       await plumber.update({ status: PlumberAccountStatus.ACTIVE });
+
+      // Log status change
+      await logStatusChange(
+        plumber.id,
+        ClientType.PLUMBER,
+        oldStatus,
+        PlumberAccountStatus.ACTIVE
+      );
+    }
+  } else {
+    // If no trader_id or plumber_id, customer_name and phone must be provided in body
+    if (!visitData.customer_name || !visitData.phone) {
+      throw new HttpError('customer_name and phone are required when trader_id or plumber_id is not provided', 400);
     }
   }
 
@@ -150,11 +222,11 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       id: visit.report_id || undefined,
       trader_id: traderId || undefined,
       plumber_id: plumberId || undefined,
-      customer_name: visitData.customer_name,
+      customer_name: customerName, // Use data from trader instead of body
       company_name: visitData.company_name,
       location: visitData.location,
       region_province: visitData.region_province,
-      phone: visitData.phone,
+      phone: customerPhone, // Use data from trader instead of body
       email: visitData.email,
       client_type: visitData.client_type,
       visit_type: visitData.visit_type,
@@ -202,14 +274,14 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     const inspectionRequest = await InspectionRequest.create({
       requestor_id: requestorUserId,
       inspector_id: inspectorId,
-      user_name: visitData.customer_name,
-      user_phone: visitData.phone,
-      nationality_id: '',
+      user_name: customerName, // Use data from trader instead of body
+      user_phone: customerPhone, // Use data from trader instead of body
+      nationality_id: customerNationalityId,
       area: area,
       city: city,
       address: visitData.location,
-      seller_name: visitData.company_name || visitData.customer_name,
-      seller_phone: visitData.phone,
+      seller_name: visitData.company_name || customerName,
+      seller_phone: customerPhone,
       certificate_id: '',
       inspection_date: new Date(),
       description: visitData.next_action,
@@ -217,6 +289,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       status: RequestStatus.ASSIGNED,
       user_lat: visit.check_in_latitude ? Number(visit.check_in_latitude) : 0,
       user_long: visit.check_in_longitude ? Number(visit.check_in_longitude) : 0,
+      visit_report_id: report.id, // Link to visit report for identification
     });
 
     // Note: items are optional for requests created from visit reports
