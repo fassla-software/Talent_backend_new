@@ -48,7 +48,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\TraderUsersController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\ReportDropdownController;
+use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\InspectionVisitController;
+use App\Http\Controllers\Admin\AwardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -481,11 +483,26 @@ Route::name('admin.')->group(function () {
             Route::delete('/report-dropdowns/{id}', 'destroy')->name('reportDropdown.destroy');
         });
     
-        // Inspection Visits routes
-        Route::controller(InspectionVisitController::class)->group(function () {
-            Route::get('/inspection-visits', 'index')->name('inspectionVisit.index');
-            Route::get('/inspection-visits/{id}', 'show')->name('inspectionVisit.show');
-            Route::put('/inspection-visits/{id}/status', 'updateStatus')->name('inspectionVisit.updateStatus');
+        // Tickets routes
+        Route::controller(TicketController::class)->group(function () {
+            Route::get('/tickets', 'index')->name('ticket.index');
+            Route::get('/tickets/{id}', 'show')->name('ticket.show');
+            Route::put('/tickets/{id}', 'update')->name('ticket.update');
+            Route::delete('/tickets/{id}', 'destroy')->name('ticket.destroy');
+        });
+
+        // Awards routes
+        Route::controller(AwardController::class)->group(function () {
+            Route::get('/awards', 'index')->name('award.index');
+            Route::post('/awards', 'store')->name('award.store');
+            Route::put('/awards/{id}', 'update')->name('award.update');
+            Route::delete('/awards/{id}', 'destroy')->name('award.destroy');
+
+            Route::get('/envoy-awards', 'envoyAwards')->name('award.envoy-awards');
+            Route::get('/envoy-awards/assign', 'assignForm')->name('award.assign.form');
+            Route::post('/envoy-awards/assign', 'assign')->name('award.assign');
+            Route::put('/envoy-awards/{id}', 'updateAssignment')->name('award.assignment.update');
+            Route::delete('/envoy-awards/{id}', 'destroyAssignment')->name('award.assignment.destroy');
         });
     });
 });

@@ -14,6 +14,9 @@ import configRouter from '../modules/config/config.routes';
 import segmentRouter from '../modules/segment/segment.routes';
 import traderRouter from '../modules/trader/trader.routes';
 import reportDropdownRouter from '../modules/reportDropdowns/report-dropdowns.routes';
+import ticketRouter from '../modules/ticket/ticket.routes';
+import awardRouter from '../modules/award/award.routes';
+import envoyRouter from '../modules/envoy/envoy.routes';
 
 const indexRouter = express.Router();
 
@@ -32,5 +35,8 @@ indexRouter.use('/withdraw', withdrawRouter);
 indexRouter.use('/config', configRouter);
 indexRouter.use('/segment', segmentRouter);
 indexRouter.use('/report-dropdowns', reportDropdownRouter);
+indexRouter.use('/ticket', ticketRouter);
+indexRouter.use('/award', awardRouter);
+indexRouter.use('/envoy', envoyRouter);
 
 export default indexRouter;

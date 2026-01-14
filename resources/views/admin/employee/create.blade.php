@@ -84,6 +84,22 @@
                             <div class="col-lg-6 mt-3">
                                 <x-input type="text" name="password_confirmation" label="Confirm Password" placeholder="Enter Confirm Password" required="true"/>
                             </div>
+
+                            <!-- Envoy Specific Fields -->
+                            <div id="envoyFields" style="display: none;" class="row">
+                                <div class="col-lg-6 mt-3">
+                                    <x-input type="number" name="weight" label="Weight" placeholder="Enter Weight" />
+                                </div>
+                                <div class="col-lg-6 mt-3">
+                                    <x-input type="number" name="target" label="Target" placeholder="Enter Target" />
+                                </div>
+                                <div class="col-lg-6 mt-3">
+                                    <x-input type="number" name="salary" label="Salary" placeholder="Enter Salary" />
+                                </div>
+                                <div class="col-lg-6 mt-3">
+                                    <x-input type="text" name="region" label="Region" placeholder="Enter Region" />
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -97,3 +113,24 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            function toggleEnvoyFields() {
+                if ($('select[name="role"]').val() === 'envoy') {
+                    $('#envoyFields').show();
+                } else {
+                    $('#envoyFields').hide();
+                }
+            }
+
+            $('select[name="role"]').on('change', function() {
+                toggleEnvoyFields();
+            });
+
+            // Initial check
+            toggleEnvoyFields();
+        });
+    </script>
+@endpush

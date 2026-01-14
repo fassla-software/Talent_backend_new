@@ -58,6 +58,27 @@
     </div>
 
     <div class="col-md-12 mt-3">
+        <div id="envoyFields" style="display: {{ $role->name === 'envoy' ? 'block' : 'none' }};" class="row">
+            <div class="col-md-3">
+                <label class="form-label mb-1">{{ __('Weight') }}</label>
+                <input type="number" name="weight" class="form-control" value="{{ old('weight', $user->envoySetting?->weight) }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">{{ __('Target') }}</label>
+                <input type="number" name="target" class="form-control" value="{{ old('target', $user->envoySetting?->target) }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">{{ __('Salary') }}</label>
+                <input type="number" name="salary" class="form-control" value="{{ old('salary', $user->envoySetting?->salary) }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">{{ __('Region') }}</label>
+                <input type="text" name="region" class="form-control" value="{{ old('region', $user->envoySetting?->region) }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 mt-3">
         <button type="submit" class="btn btn-primary">Update</button>
     </div>
 </form>
@@ -212,5 +233,19 @@
         }
 
         countSelectedPermissions();
+
+        $(document).ready(function() {
+            function toggleEnvoyFields() {
+                if ($('select[name="role"]').val() === 'envoy') {
+                    $('#envoyFields').show();
+                } else {
+                    $('#envoyFields').hide();
+                }
+            }
+
+            $('select[name="role"]').on('change', function() {
+                toggleEnvoyFields();
+            });
+        });
     </script>
 @endpush

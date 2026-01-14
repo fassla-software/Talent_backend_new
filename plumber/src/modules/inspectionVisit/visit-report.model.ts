@@ -1,10 +1,12 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/db';
 import Trader from '../trader/trader.model';
+import Plumber from '../plumber/plumber.model';
 
 class VisitReport extends Model {
   public id!: number;
   public trader_id?: number | null;
+  public plumber_id?: number | null;
   // Customer Information (معلومات العميل)
   public customer_name!: string;
   public company_name?: string | null;
@@ -39,6 +41,7 @@ class VisitReport extends Model {
 
   // Relations
   public trader?: Trader;
+  public plumber?: Plumber;
 }
 
 VisitReport.init(
@@ -53,6 +56,16 @@ VisitReport.init(
       allowNull: true,
       references: {
         model: 'traders',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
+    },
+    plumber_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+      references: {
+        model: 'plumbers',
         key: 'id',
       },
       onDelete: 'SET NULL',
@@ -158,6 +171,16 @@ VisitReport.belongsTo(Trader, {
 
 Trader.hasMany(VisitReport, {
   foreignKey: 'trader_id',
+  as: 'visitReports',
+});
+
+VisitReport.belongsTo(Plumber, {
+  foreignKey: 'plumber_id',
+  as: 'plumber',
+});
+
+Plumber.hasMany(VisitReport, {
+  foreignKey: 'plumber_id',
   as: 'visitReports',
 });
 

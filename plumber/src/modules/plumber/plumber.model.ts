@@ -7,6 +7,14 @@ export enum PlumberStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
 }
+
+export enum PlumberAccountStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  DORMANT = 'DORMANT',
+  PENDING = 'PENDING',
+}
+
 interface PlumberAttributes {
   id: number;
   user_id: number;
@@ -23,6 +31,8 @@ interface PlumberAttributes {
   withdraw_money: number;
   gift_points: number;
   fixed_points: number;
+  inspector_id?: number | null;
+  status: PlumberAccountStatus;
   createdAt: Date;
   updatedAt: Date;
   user?: User;
@@ -42,7 +52,9 @@ interface PlumberCreationAttributes
     | 'instant_withdrawal'
     | 'image'
     | 'withdraw_money'
-  > {}
+    | 'inspector_id'
+    | 'status'
+  > { }
 
 class Plumber extends Model<PlumberAttributes, PlumberCreationAttributes> {
   public id!: number;
@@ -62,6 +74,8 @@ class Plumber extends Model<PlumberAttributes, PlumberCreationAttributes> {
   public withdraw_money?: number;
   public gift_points?: number;
   public fixed_points?: number;
+  public inspector_id?: number | null;
+  public status!: PlumberAccountStatus;
 
   // Define the association explicitly
   public user?: User;
@@ -140,6 +154,19 @@ Plumber.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    inspector_id: {
+      type: DataTypes.BIGINT.UNSIGNED,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    status: {
+      type: DataTypes.ENUM('ACTIVE', 'INACTIVE', 'DORMANT', 'PENDING'),
+      allowNull: false,
+      defaultValue: 'PENDING',
     },
     createdAt: {
       type: DataTypes.DATE,

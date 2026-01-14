@@ -163,9 +163,14 @@ class User extends Authenticatable
         );
     }
 	
-	public function plumber()
+    public function plumber()
     {
         return $this->hasOne(Plumber::class);
+    }
+
+    public function envoySetting(): HasOne
+    {
+        return $this->hasOne(EnvoySetting::class, 'user_id');
     }
     /**
      * Scope a query to only include active records.

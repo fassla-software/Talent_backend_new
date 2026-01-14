@@ -51,6 +51,29 @@ class SMSSender {
     }
   }
 
+  async sendMessage(mobile: string, message: string) {
+    try {
+      const formattedMobile = this.formatPhoneNumber(mobile);
+
+      const url = new URL(baseUrl.toString());
+      url.pathname = '/api/SMS/';
+      url.searchParams.append('environment', '1'); // 2 to test mode  1 for live
+      url.searchParams.append('username', SMS_MISR_USERNAME);
+      url.searchParams.append('password', SMS_MISR_PASSWORD);
+      url.searchParams.append('sender', SMS_MISR_SENDER);
+      url.searchParams.append('mobile', formattedMobile);
+      url.searchParams.append('message', message);
+      url.searchParams.append('language', '1'); // 1 for English
+
+      console.log('Sending Message to:', formattedMobile);
+      const response = await axios.post(url.toString());
+      return response.data;
+    } catch (error) {
+      console.error('Error sending Message:', error);
+      throw error;
+    }
+  }
+
   async checkBalance() {
     try {
       const url = new URL(baseUrl.toString());

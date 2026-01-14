@@ -4,6 +4,7 @@ import Media from '../media/media.model';
 import InspectionRequest from '../inspectionRequest/inspection_request.model';
 import ReceivedGift from '../gift/receivedGift/received_gift.model';
 import { PlumberStatus } from '../plumber/plumber.model';
+import type EnvoySetting from '../envoy/envoy.model';
 
 class User extends Model {
   public id!: number;
@@ -34,6 +35,7 @@ class User extends Model {
   received_gifts?: ReceivedGift[];
   approved_requests_count?: number;
   canceled_requests_count?: number;
+  envoySetting?: EnvoySetting;
 }
 
 User.init(

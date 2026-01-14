@@ -464,6 +464,40 @@
         </span>
     </a>
 </li>
+
+<li>
+    <a class="menu {{ $request->routeIs('admin.ticket.*') ? 'active' : '' }}"
+        href="{{ route('admin.ticket.index') }}">
+        <span>
+            <i class="fa-solid fa-ticket menu-icon"></i>
+            {{ __('Tickets') }}
+        </span>
+    </a>
+</li>
+
+<li class="menu-divider">
+    <span class="menu-title">{{ __('Awards') }}</span>
+</li>
+
+<li>
+    <a class="menu {{ $request->routeIs('admin.award.index') ? 'active' : '' }}"
+        href="{{ route('admin.award.index') }}">
+        <span>
+            <i class="fa-solid fa-trophy menu-icon"></i>
+            {{ __('Awards List') }}
+        </span>
+    </a>
+</li>
+
+<li>
+    <a class="menu {{ $request->routeIs('admin.award.envoy-awards') || $request->routeIs('admin.award.assign.form') ? 'active' : '' }}"
+        href="{{ route('admin.award.envoy-awards') }}">
+        <span>
+            <i class="fa-solid fa-medal menu-icon"></i>
+            {{ __('Envoy Awards') }}
+        </span>
+    </a>
+</li>
         
 <li class="menu-divider">
     <span class="menu-title">{{ __('Other') }}</span>

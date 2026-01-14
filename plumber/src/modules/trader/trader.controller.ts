@@ -12,6 +12,7 @@ import {
     getProfile,
     searchTraders
 } from './trader.service';
+import EnvoySetting from '../envoy/envoy.model';
 
 export const getTradersHandler = asyncHandler(async (req: Request, res: Response) => {
     const traders = await getTraders();
@@ -66,16 +67,25 @@ export const updateProfileHandler = asyncHandler(async (req: Request, res: Respo
     res.status(200).json({ message: 'Profile updated successfully' });
 }, 'Failed to update profile');
 
-export const searchTradersHandler = asyncHandler(async (req: Request, res: Response) => {
+export const searchTradersHandler = asyncHandler(async (req: any, res: Response) => {
     const { name, phone } = req.query;
-    
+
     if (!name && !phone) {
         return res.status(400).json({ message: 'Either name or phone parameter is required' });
+    }
+
+    let city: string | undefined;
+
+    // Middleware guarantees user is authenticated and is an envoy
+    const userId = req.user.id;
+    const envoySetting = await EnvoySetting.findOne({ where: { user_id: userId } });
+    if (envoySetting && envoySetting.region) {
+        city = envoySetting.region;
     }
 
     const nameStr = typeof name === 'string' ? name : undefined;
     const phoneStr = typeof phone === 'string' ? phone : undefined;
 
-    const result = await searchTraders(nameStr, phoneStr);
+    const result = await searchTraders(nameStr, phoneStr, city);
     res.status(200).json(result);
 }, 'Failed to search traders');

@@ -12,6 +12,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
+import { initTraderStatusCron } from './cron/trader-status.cron';
 
 const PORT = getConfig('PORT');
 
@@ -59,4 +60,5 @@ connectDB
   });
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  initTraderStatusCron();
 });
