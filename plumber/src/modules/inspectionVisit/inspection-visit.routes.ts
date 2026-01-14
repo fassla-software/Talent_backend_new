@@ -10,6 +10,7 @@ import {
   getAdminVisitsHandler,
   getAdminVisitDetailsHandler,
   updateVisitStatusHandler,
+  getEnvoyWeeklyStatisticsHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -89,6 +90,13 @@ router.get(
   authenticate,
   authorize(Roles.Envoy),
   getEnvoyVisitsHandler,
+);
+
+router.get(
+  '/envoy/weekly-stats',
+  authenticate,
+  authorize(Roles.Envoy),
+  getEnvoyWeeklyStatisticsHandler,
 );
 
 // Admin routes

@@ -12,6 +12,7 @@ import {
   getAdminVisits,
   getAdminVisitDetails,
   updateVisitStatus,
+  getEnvoyWeeklyStatistics,
   ICheckInData,
   ICheckOutData,
   ISubmitVisitReportData,
@@ -49,13 +50,13 @@ export const submitVisitReportHandler = asyncHandler(async (req: AuthenticatedRe
         try {
           const fileName = `${file.filename.split('.').shift()}.webp`;
           const optimizedFullPath = path.join(optimizedPath, `optimized-${fileName}`);
-          
+
           // Optimize and convert to webp
           await optimizeImage(file.path, optimizedFullPath);
-          
+
           // Delete original file
           await deleteImage(file.path);
-          
+
           // Return full URL
           return `${BASE_URL}/uploads/optimized-${fileName}`;
         } catch (error) {
@@ -142,4 +143,13 @@ export const updateVisitStatusHandler = asyncHandler(async (req: Request, res: R
     data: { id: visit.id, status: visit.status },
   });
 }, 'Failed to update visit status');
+
+export const getEnvoyWeeklyStatisticsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const statistics = await getEnvoyWeeklyStatistics(inspectorId);
+  res.status(200).json({
+    message: 'Weekly statistics retrieved successfully',
+    data: statistics,
+  });
+}, 'Failed to get weekly statistics');
 

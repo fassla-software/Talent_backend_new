@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import HttpError from '../../utils/HttpError';
 import InspectionVisit from './inspection-visit.model';
 import VisitReport from './visit-report.model';
@@ -445,5 +446,118 @@ export const updateVisitStatus = async (visitId: number, status: string) => {
 
   await visit.update({ status });
   return visit;
+};
+
+/**
+ * Get weekly statistics for envoy
+ * Week runs from Saturday to Friday
+ */
+export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
+  const now = new Date();
+
+  // Helper function to get Saturday of a given week
+  const getSaturday = (date: Date, offset: number = 0): Date => {
+    const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+    const diff = day === 6 ? offset * 7 : (day + 1 + offset * 7);
+    const saturday = new Date(date);
+    saturday.setDate(date.getDate() - diff);
+    saturday.setHours(0, 0, 0, 0);
+    return saturday;
+  };
+
+  // Get this week's Saturday (start of current week)
+  const thisWeekStart = getSaturday(now, 0);
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // Friday
+  thisWeekEnd.setHours(23, 59, 59, 999);
+
+  // Get last week's Saturday (start of previous week)
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+  const lastWeekEnd = new Date(lastWeekStart);
+  lastWeekEnd.setDate(lastWeekStart.getDate() + 6); // Friday
+  lastWeekEnd.setHours(23, 59, 59, 999);
+
+  // Count visits for this week (completed visits only - those with check_out_at)
+  const thisWeekVisitsCount = await InspectionVisit.count({
+    where: {
+      inspector_id: inspectorId,
+      check_out_at: {
+        [Op.between]: [thisWeekStart, thisWeekEnd],
+      },
+    },
+  });
+
+  // Count visits for last week
+  const lastWeekVisitsCount = await InspectionVisit.count({
+    where: {
+      inspector_id: inspectorId,
+      check_out_at: {
+        [Op.between]: [lastWeekStart, lastWeekEnd],
+      },
+    },
+  });
+
+  // Calculate progress
+  let progressPercentage = 0;
+  let trend: 'up' | 'down' | 'stable' = 'stable';
+  const difference = thisWeekVisitsCount - lastWeekVisitsCount;
+
+  if (lastWeekVisitsCount > 0) {
+    progressPercentage = Number((((thisWeekVisitsCount - lastWeekVisitsCount) / lastWeekVisitsCount) * 100).toFixed(2));
+  } else if (thisWeekVisitsCount > 0) {
+    // If last week was 0, show 100% increase if there are visits this week
+    progressPercentage = 100;
+  }
+
+  if (difference > 0) {
+    trend = 'up';
+  } else if (difference < 0) {
+    trend = 'down';
+  }
+
+  // Count active traders
+  const activeTraders = await Trader.count({
+    where: {
+      inspector_id: inspectorId,
+      status: TraderActivityStatus.ACTIVE,
+    },
+  });
+
+  // Count active plumbers
+  const activePlumbers = await Plumber.count({
+    where: {
+      inspector_id: inspectorId,
+      status: PlumberAccountStatus.ACTIVE,
+    },
+  });
+
+  // Format dates for response
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  return {
+    this_week: {
+      visits_count: thisWeekVisitsCount,
+      start_date: formatDate(thisWeekStart),
+      end_date: formatDate(thisWeekEnd),
+    },
+    last_week: {
+      visits_count: lastWeekVisitsCount,
+      start_date: formatDate(lastWeekStart),
+      end_date: formatDate(lastWeekEnd),
+    },
+    progress: {
+      percentage: progressPercentage,
+      difference,
+      trend,
+    },
+    active_clients: {
+      traders: activeTraders,
+      plumbers: activePlumbers,
+      total: activeTraders + activePlumbers,
+    },
+  };
 };
 
