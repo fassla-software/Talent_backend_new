@@ -4,4 +4,5 @@ export enum RequestFilterStatus {
   REVIEWED = 'REVIEWED', // Reviewed
   ACCEPTED = 'ACCEPTED',
   REJECTED = 'REJECTED',
+  PENDING = 'PENDING', // Pending with note
 }
