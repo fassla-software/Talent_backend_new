@@ -9,6 +9,8 @@ import {
   getInspectionRequests,
   getUserRequests,
   bulkDeleteInspectionRequests,
+  pendingInspectionRequest,
+  getInspectorPendingRequests,
 } from './inspection_request.service';
 import { IFilter } from './dto/filer.dto';
 import { AuthenticatedRequest } from '../../@types/express';
@@ -64,3 +66,20 @@ export const bulkDeleteInspectionRequestsHandler = asyncHandler(async (req: Requ
   const result = await bulkDeleteInspectionRequests(ids);
   res.status(200).json(result);
 }, 'Failed to bulk delete requests');
+
+export const pendingInspectionRequestHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspector_id = req.user!.id;
+  const { request_id, note } = req.body;
+  const request = await pendingInspectionRequest({ request_id, inspector_id, note });
+  res.status(200).json({ 
+    message: 'تم التعليق بنجاح',
+    request 
+  });
+}, 'Failed to mark request as pending');
+
+export const getInspectorPendingRequestsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspector_id = req.user!.id;
+  const filter = req.query;
+  const requests = await getInspectorPendingRequests(inspector_id, filter);
+  res.status(200).json({ requests });
+}, 'Failed to get pending requests');
