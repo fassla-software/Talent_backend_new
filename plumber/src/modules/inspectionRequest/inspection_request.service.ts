@@ -257,6 +257,11 @@ export const getUserRequests = async (id: string, role: string, filter: IFilter)
           };
         }
         break;
+      case RequestFilterStatus.PENDING:
+        if (role === Roles.Envoy) {
+          conditions.status = RequestStatus.PENDING;
+        }
+        break;
       default:
         conditions.status = '';
         break;
@@ -484,6 +489,9 @@ export const approveInspectionRequest = async (data: {
   if (!plumber) {
     throw new HttpError('Plumber nor found', 404);
   }
+  if (!request.certificate_id) {
+    throw new HttpError('Certificate ID is required', 400);
+  }
   const fileUrl = await createCertificatePDF({
     certificate_id: request.certificate_id,
     user_name: request.user_name,
@@ -494,6 +502,7 @@ export const approveInspectionRequest = async (data: {
     address: request.address,
     date: request.inspection_date.toISOString().split('T')[0],
     url: `${BASE_URL}/PDF/${request.user_name}_${request.certificate_id}`,
+    description: request.description || '',
   });
 
   const fileName = path.basename(fileUrl);
@@ -531,4 +540,141 @@ export const bulkDeleteInspectionRequests = async (requestIds: string[]) => {
     deleted: deletedCount,
     deletedCount: deletedCount,
   };
+};
+
+export const pendingInspectionRequest = async (data: {
+  request_id: string;
+  inspector_id: string;
+  note: string;
+}) => {
+  const { request_id, inspector_id, note } = data;
+  const request = await InspectionRequest.findByPk(request_id);
+
+  if (!request) {
+    throw new HttpError('Request not found', 404);
+  }
+
+  // Verify that the inspector owns this task
+  if (String(request.inspector_id) !== String(inspector_id)) {
+    throw new HttpError('You are not authorized to update this request', 403);
+  }
+
+  await request.update({
+    status: RequestStatus.PENDING,
+    note: note,
+  });
+
+  return request;
+};
+
+export const getInspectorPendingRequests = async (inspector_id: string, filter: IFilter) => {
+  const { area, city, user_name, limit = 10, skip = 0 } = filter;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conditions: any = {
+    inspector_id: inspector_id,
+    status: RequestStatus.PENDING,
+  };
+
+  if (area) {
+    conditions.area = { [Op.like]: `%${area}%` };
+  }
+  if (city) {
+    conditions.city = { [Op.like]: `%${city}%` };
+  }
+  if (user_name) {
+    conditions.user_name = { [Op.like]: `%${user_name}%` };
+  }
+
+  // Fetch requests with items and related data
+  const requestsWithItems = await InspectionRequest.findAll({
+    where: conditions,
+    include: [
+      {
+        model: InspectionRequestItem,
+        as: 'items',
+        include: [
+          {
+            model: PlumberCategory,
+            as: 'subcategory',
+          },
+        ],
+      },
+      {
+        model: User,
+        as: 'requestor',
+        attributes: ['name', 'phone'],
+      },
+    ],
+    limit: Number(limit),
+    offset: Number(skip),
+    order: [['createdAt', 'DESC']],
+  });
+
+  // Transform the fetched data
+  const requestObjects = await Promise.all(
+    requestsWithItems.map(async request => {
+      const requestObject = request.toJSON();
+      requestObject.plumber_name = requestObject.requestor.name;
+      requestObject.plumber_phone = requestObject.requestor.phone;
+
+      delete requestObject.requestor;
+
+      // Parse and format images
+      requestObject.images = requestObject.images ? viewImages(JSON.parse(requestObject.images)) : [];
+      requestObject.inspection_images = requestObject.inspection_images
+        ? viewImages(JSON.parse(requestObject.inspection_images))
+        : [];
+
+      // Calculate distance if coordinates are available
+      if (
+        requestObject.user_lat &&
+        requestObject.user_long &&
+        requestObject.inspection_lat &&
+        requestObject.inspection_long
+      ) {
+        requestObject.distance = haversineDistance(
+          requestObject.user_lat,
+          requestObject.user_long,
+          requestObject.inspection_lat,
+          requestObject.inspection_long,
+        );
+      } else {
+        requestObject.distance = null;
+      }
+
+      // Remove sensitive coordinates
+      delete requestObject.user_lat;
+      delete requestObject.user_long;
+      delete requestObject.inspection_lat;
+      delete requestObject.inspection_long;
+
+      // Fetch and attach categories
+      const categories = await getPlumberCategories();
+      if (requestObject.items) {
+        requestObject.items = requestObject.items.map((item: InspectionRequestItem) => {
+          const subcategory = item.subcategory;
+          const parentCategories = getAllParents(categories, subcategory.id);
+          const parentNames = parentCategories
+            .reverse()
+            .map(parent => parent.name)
+            .join(' > ');
+          const fullName = `${parentNames} > ${subcategory.name}`;
+
+          return {
+            ...item,
+            subcategory: {
+              ...subcategory,
+              name: fullName,
+              image: subcategory.image ? viewImages(subcategory.image) : '',
+            },
+          };
+        });
+      }
+
+      return requestObject;
+    }),
+  );
+
+  return requestObjects;
 };

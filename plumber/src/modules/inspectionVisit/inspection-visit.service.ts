@@ -6,6 +6,8 @@ import User from '../user/user.model';
 import Trader, { TraderActivityStatus } from '../trader/trader.model';
 import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
 import { saveImages, viewImages } from '../../utils/imageUtils';
+import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspection_request.model';
+import InspectionRequestItem from '../inspectionRequest/inspection_request-items.model';
 
 export interface ICheckInData {
   latitude: number;
@@ -179,6 +181,47 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   await visit.update({
     report_id: report.id,
   });
+
+  // If next_action is provided, create a new inspection request for the inspector
+  if (visitData.next_action && visitData.next_action.trim() !== '') {
+    // Parse location to extract city and area if possible
+    const locationParts = visitData.location.split(',').map(part => part.trim());
+    const city = visitData.region_province || locationParts[locationParts.length - 1] || 'غير محدد';
+    const area = locationParts.length > 1 ? locationParts[0] : 'غير محدد';
+
+    // Get user_id from plumber if plumberId exists
+    let requestorUserId: number | null = null;
+    if (plumberId) {
+      const plumber = await Plumber.findByPk(plumberId);
+      if (plumber && plumber.user_id) {
+        requestorUserId = plumber.user_id;
+      }
+    }
+
+    // Create inspection request from visit report data
+    const inspectionRequest = await InspectionRequest.create({
+      requestor_id: requestorUserId,
+      inspector_id: inspectorId,
+      user_name: visitData.customer_name,
+      user_phone: visitData.phone,
+      nationality_id: '',
+      area: area,
+      city: city,
+      address: visitData.location,
+      seller_name: visitData.company_name || visitData.customer_name,
+      seller_phone: visitData.phone,
+      certificate_id: '',
+      inspection_date: new Date(),
+      description: visitData.next_action,
+      images: savedImages.length > 0 ? savedImages : [],
+      status: RequestStatus.ASSIGNED,
+      user_lat: visit.check_in_latitude ? Number(visit.check_in_latitude) : 0,
+      user_long: visit.check_in_longitude ? Number(visit.check_in_longitude) : 0,
+    });
+
+    // Note: items are optional for requests created from visit reports
+    // If needed, they can be added later
+  }
 
   return {
     visit_id: visit.id,

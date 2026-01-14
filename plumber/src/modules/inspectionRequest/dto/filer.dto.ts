@@ -10,7 +10,8 @@ export interface IFilter {
     | RequestFilterStatus.REJECTED
     | RequestFilterStatus.REVIEWED
     | RequestFilterStatus.SEND
-    | RequestFilterStatus.UNDER_REVIEW;
+    | RequestFilterStatus.UNDER_REVIEW
+    | RequestFilterStatus.PENDING;
 
   limit?: number;
   skip?: number;

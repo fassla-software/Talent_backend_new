@@ -184,3 +184,14 @@ export const bulkDeleteValidation = [
   handleValidationErrors,
   strict,
 ];
+
+export const pendingRequestVal = [
+  body('request_id').isInt().withMessage('request id must be number'),
+  body('note')
+    .notEmpty()
+    .withMessage('note is required')
+    .isString()
+    .withMessage('note must be a string'),
+  handleValidationErrors,
+  strict,
+];
