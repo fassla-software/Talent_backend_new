@@ -1,4 +1,6 @@
 import EnvoySetting from './envoy.model';
+import EnvoyNote from './note.model';
+import Ticket from '../ticket/ticket.model';
 import User from '../user/user.model';
 import Plumber from '../plumber/plumber.model';
 import Trader from '../trader/trader.model';
@@ -16,6 +18,7 @@ import { Op } from 'sequelize';
 import SMSSender from '../../utils/smsSender';
 import { logStatusChange } from '../statusHistory/status-history.service';
 import { ClientType } from '../statusHistory/status-history.model';
+import NotificationUnique from '../user/notification.model';
 
 export const getEnvoySettingByUserId = async (userId: number) => {
     return await EnvoySetting.findOne({ where: { user_id: userId } });
@@ -166,4 +169,74 @@ export const registerUserByEnvoy = async (
     } else {
         return { token, role: assignedRole, ...user.get() };
     }
+};
+
+export const getNotifications = async (userId: number) => {
+    return await NotificationUnique.findAll({
+        where: { user_id: userId },
+        order: [['created_at', 'DESC']],
+    });
+};
+
+export const createNote = async (envoyId: number, clientId: number, content: string) => {
+    return await EnvoyNote.create({
+        envoy_id: envoyId,
+        client_id: clientId,
+        content,
+    });
+};
+
+export const getEnvoyClients = async (envoyId: number, name?: string, phone?: string) => {
+    const userWhere: any = {};
+    if (name) userWhere.name = { [Op.like]: `%${name}%` };
+    if (phone) userWhere.phone = { [Op.like]: `%${phone}%` };
+
+    const traders = await Trader.findAll({
+        where: { inspector_id: envoyId },
+        include: [
+            {
+                model: User,
+                as: 'user',
+                where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+                include: [
+                    {
+                        model: Ticket,
+                        as: 'client_tickets',
+                    },
+                    {
+                        model: EnvoyNote,
+                        as: 'clientNotes',
+                    },
+                ],
+            },
+        ],
+    });
+
+    const plumbers = await Plumber.findAll({
+        where: { inspector_id: envoyId },
+        include: [
+            {
+                model: User,
+                as: 'user',
+                where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+                include: [
+                    {
+                        model: Ticket,
+                        as: 'client_tickets',
+                    },
+                    {
+                        model: EnvoyNote,
+                        as: 'clientNotes',
+                    },
+                ],
+            },
+        ],
+    });
+
+    const clients = [
+        ...traders.map(t => ({ ...t.toJSON(), role: 'trader' })),
+        ...plumbers.map(p => ({ ...p.toJSON(), role: 'plumber' })),
+    ];
+
+    return clients;
 };

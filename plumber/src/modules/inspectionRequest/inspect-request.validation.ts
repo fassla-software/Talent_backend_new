@@ -153,6 +153,8 @@ export const filterVal = [
     .withMessage(`Status must be one of ${Object.values(RequestFilterStatus).join(', ')}`),
   query('limit').isInt().optional().withMessage(`limit must be integer`),
   query('skip').isInt().optional().withMessage(`skip must be integer`),
+  query('requestor_id').isInt().optional().withMessage(`requestor_id must be integer`),
+  query('inspector_id').isInt().optional().withMessage(`inspector_id must be integer`),
   handleValidationErrors,
   strict,
 ];

@@ -97,6 +97,9 @@
                                     <x-input type="number" name="salary" label="Salary" placeholder="Enter Salary" />
                                 </div>
                                 <div class="col-lg-6 mt-3">
+                                    <x-input type="number" name="incentives" label="Incentives" placeholder="Enter Incentives" />
+                                </div>
+                                <div class="col-lg-6 mt-3">
                                     <x-input type="text" name="region" label="Region" placeholder="Enter Region" />
                                 </div>
                             </div>

@@ -20,6 +20,7 @@ import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspectio
 import { PendingBonus } from '../user/pending-bonus.model';
 import Trader from '../trader/trader.model';
 import EnvoySetting from '../envoy/envoy.model';
+import DeviceKey from '../user/device_key.model';
 
 
 import {
@@ -28,6 +29,7 @@ import {
   getPlumberDetails,
   getPlumberReportDetails,
 } from './plumber.utils';
+import { sendPushNotification } from '../../utils/notification';
 import SMSSender from '../../utils/smsSender';
 
 // export const registerPlumber = async (newPlumber: ICreatePlumber) => {
@@ -189,7 +191,7 @@ export const registerPlumber = async (newPlumber: ICreatePlumber) => {
 
 // new registration flow handles both plumber and trader registration
 export const registerPlumber = async (newPlumber: ICreatePlumber, role: Roles = Roles.PLUMBER) => {
-  const { name, password, phone, city, area, referralCode } = newPlumber;
+  const { name, password, phone, city, area, referralCode, device_token, device_type } = newPlumber;
 
   let referrer: User | null = null;
 
@@ -212,6 +214,14 @@ export const registerPlumber = async (newPlumber: ICreatePlumber, role: Roles = 
   });
 
   if (!user) throw new HttpError('User not created', 404);
+
+  if (device_token) {
+    await DeviceKey.create({
+      user_id: user.id,
+      key: device_token,
+      device_type: device_type || 'android',
+    });
+  }
 
   let plumber = null;
   let trader = null;
@@ -365,7 +375,7 @@ export const registerPlumber = async (newPlumber: ICreatePlumber, role: Roles = 
 
 
 export const loginPlumber = async (data: ILoginPlumber) => {
-  const { password, phone } = data;
+  const { password, phone, device_token, device_type } = data;
   const user = await User.findOne({ where: { phone } });
 
   if (!user) throw new HttpError('Incorrect phone or password', 404);
@@ -383,6 +393,13 @@ export const loginPlumber = async (data: ILoginPlumber) => {
   const token = jwt.sign(payload, process.env.KEY!, { expiresIn: '7d' });
 
   user.last_login_token = token;
+  if (device_token) {
+    user.device_token = device_token;
+    await DeviceKey.findOrCreate({
+      where: { user_id: user.id, key: device_token },
+      defaults: { device_type: device_type || 'android' },
+    });
+  }
   await user.save();
 
   if (role === Roles.Envoy || role === Roles.TRADER) {
@@ -582,14 +599,28 @@ export const updatePlumberActive = async (userId: string, is_active: boolean) =>
   if (!user) {
     throw new HttpError('User Not found', 404);
   }
-  console.log(user);
+
+  const plumber = await Plumber.findOne({ where: { user_id: userId } });
+  if (!plumber) {
+    throw new HttpError('Plumber Not found', 404);
+  }
+
   user.is_active = is_active;
   if (user.status !== PlumberStatus.PENDING) {
     throw new HttpError('User is not pending', 400);
   }
-  user.status = is_active ? PlumberStatus.APPROVED : PlumberStatus.REJECTED;
+  const newStatus = is_active ? PlumberStatus.APPROVED : PlumberStatus.REJECTED;
+  user.status = newStatus;
 
   await user.save();
+
+  // Trigger notification to envoy if exists
+  if (plumber.inspector_id) {
+    const title = 'Registration Update';
+    const body = `The plumber ${user.name} you registered has been ${newStatus.toLowerCase()}.`;
+    sendPushNotification(Number(plumber.inspector_id), title, body);
+  }
+
   return;
 };
 

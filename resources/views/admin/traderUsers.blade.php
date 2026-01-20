@@ -8,6 +8,9 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0 text-gray-800">Traders Management</h1>
+                <a href="{{ route('admin.traders.create') }}" class="btn btn-primary btn-sm">
+                    <i class="fa fa-plus"></i> Create Trader
+                </a>
             </div>
 
             @if(session('success'))
@@ -224,6 +227,19 @@
                                 <label>Points</label>
                                 <div class="input-group mb-3">
                                     <input type="number" min="0" name="points" value="{{ $trader->points }}" class="form-control" placeholder="points" aria-label="points">
+                                </div>
+
+                                <!-- Envoy (Inspector) Field -->
+                                <label>Assign Envoy</label>
+                                <div class="input-group mb-3">
+                                    <select name="inspector_id" class="form-control">
+                                        <option value="">Select Envoy</option>
+                                        @foreach($envoys as $envoy)
+                                            <option value="{{ $envoy->id }}" {{ $trader->inspector_id == $envoy->id ? 'selected' : '' }}>
+                                                {{ $envoy->name }} ({{ $envoy->phone }})
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div class="modal-footer">

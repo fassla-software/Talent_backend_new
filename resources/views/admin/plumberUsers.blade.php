@@ -35,6 +35,9 @@
             <i class="fa fa-refresh"></i> Start New Fiscal Year
         </button>
         @endhasPermission
+        <a href="{{ route('admin.plumberUsers.create') }}" class="btn btn-success btn-sm ml-3">
+            <i class="fa fa-plus"></i> Create Plumber
+        </a>
     </div>
       <!-- Filter by Status -->
 <form method="GET" action="{{ route('admin.plumberUsers') }}" class="mb-4">
@@ -227,6 +230,19 @@
                         <label>Fixed Points</label>
                         <div class="input-group mb-3">
                             <input type="number" name="fixed_points" value="{{ $plumber->fixed_points }}" class="form-control" placeholder="Fixed Points" aria-label="Fixed Points">
+                        </div>
+
+                        <!-- Envoy (Inspector) Field -->
+                        <label>Assign Envoy</label>
+                        <div class="input-group mb-3">
+                            <select name="inspector_id" class="form-control">
+                                <option value="">Select Envoy</option>
+                                @foreach($envoys as $envoy)
+                                    <option value="{{ $envoy->id }}" {{ $plumber->inspector_id == $envoy->id ? 'selected' : '' }}>
+                                        {{ $envoy->name }} ({{ $envoy->phone }})
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         

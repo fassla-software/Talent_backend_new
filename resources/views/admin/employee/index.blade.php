@@ -92,6 +92,13 @@
                                     <div class="d-flex gap-2 justify-content-center">
 
                                         @if ($role != 'root')
+                                            @hasPermission('admin.employee.index')
+                                                <a href="{{ route('admin.employee.show', $user->id) }}"
+                                                    class="btn btn-info btn-sm px-1 py-0" style="font-size: 16px;">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </a>
+                                            @endhasPermission
+
                                             @hasPermission('admin.employee.permission')
                                                 <a href="{{ route('admin.employee.permission', $user->id) }}"
                                                     class="btn btn-primary btn-sm px-1 py-0" style="font-size: 16px;">

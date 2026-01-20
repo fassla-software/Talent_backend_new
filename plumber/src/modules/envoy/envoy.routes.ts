@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as envoyController from './envoy.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
-import { registerUserByEnvoyValidation } from './envoy.validation';
+import { registerUserByEnvoyValidation, createNoteValidation } from './envoy.validation';
 import upload from '../../middlewares/upload.middleware';
 
 const router = Router();
@@ -19,6 +19,30 @@ router.get(
     '/stats',
     authenticate,
     envoyController.getEnvoyStatisticsHandler
+);
+
+router.post(
+    '/admin/stats',
+    envoyController.getAdminEnvoyStatisticsHandler
+);
+
+router.get(
+    '/notifications',
+    authenticate,
+    envoyController.getNotificationsHandler
+);
+
+router.post(
+    '/notes',
+    authenticate,
+    createNoteValidation,
+    envoyController.createNoteHandler
+);
+
+router.get(
+    '/clients',
+    authenticate,
+    envoyController.getEnvoyClientsHandler
 );
 
 export default router;

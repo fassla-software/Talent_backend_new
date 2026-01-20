@@ -91,6 +91,7 @@ public function index(Request $request)
                 'weight' => $request->weight ?? 0,
                 'target' => $request->target ?? 0,
                 'salary' => $request->salary ?? 0,
+                'incentives' => $request->incentives ?? 0,
                 'region' => $request->region,
             ]);
         }
@@ -246,6 +247,7 @@ public function update(Request $request, $id)
                 'weight' => $request->weight ?? 0,
                 'target' => $request->target ?? 0,
                 'salary' => $request->salary ?? 0,
+                'incentives' => $request->incentives ?? 0,
                 'region' => $request->region,
             ]
         );
@@ -253,6 +255,47 @@ public function update(Request $request, $id)
 
     return redirect()->route('admin.employee.index')->with('success', 'User updated successfully');
 }
+
+public function show(User $user, Request $request)
+{
+    $role = $user->roles()?->pluck('name')->first();
+    $timingData = null;
+    $salesStats = null;
+
+    if ($role === 'envoy') {
+        $date = $request->get('date', now()->toDateString());
+        $period = $request->get('period', 'week');
+
+        try {
+            // Fetch Visit Timing
+            $timingResponse = \Illuminate\Support\Facades\Http::post('https://app.talentindustrial.com/plumber/inspection-visit/timing', [
+                'envoy_id' => $user->id,
+                'date' => $date
+            ]);
+
+            if ($timingResponse->successful()) {
+                $timingData = $timingResponse->json()['data'];
+            }
+
+            // Fetch Sales Stats
+            $salesResponse = \Illuminate\Support\Facades\Http::post('https://app.talentindustrial.com/plumber/envoy/admin/stats', [
+                'envoy_id' => $user->id,
+                'period' => $period,
+                'date' => $date
+            ]);
+
+            if ($salesResponse->successful()) {
+                $salesStats = $salesResponse->json()['data'];
+            }
+
+        } catch (\Exception $e) {
+            logger()->error('Failed to fetch envoy data: ' . $e->getMessage());
+        }
+    }
+
+    return view('admin.employee.show', compact('user', 'role', 'timingData', 'salesStats'));
+}
+
 
 
 }

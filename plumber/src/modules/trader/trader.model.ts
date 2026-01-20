@@ -31,6 +31,8 @@ interface TraderAttributes {
     instant_withdrawal: number;
     withdraw_money: number;
     points: number;
+    latitude?: number | null;
+    longitude?: number | null;
     createdAt: Date;
     updatedAt: Date;
     user?: User;
@@ -73,6 +75,8 @@ class Trader extends Model<TraderAttributes, TraderCreationAttributes> {
     public instant_withdrawal?: number;
     public withdraw_money?: number;
     public points?: number;
+    public latitude?: number | null;
+    public longitude?: number | null;
 
     // Define the association explicitly
     public user?: User;
@@ -162,6 +166,16 @@ Trader.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        latitude: {
+            type: DataTypes.DECIMAL(10, 8),
+            allowNull: true,
+            defaultValue: null,
+        },
+        longitude: {
+            type: DataTypes.DECIMAL(11, 8),
+            allowNull: true,
+            defaultValue: null,
         },
         createdAt: {
             type: DataTypes.DATE,

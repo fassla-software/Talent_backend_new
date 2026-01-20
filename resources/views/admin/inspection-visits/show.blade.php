@@ -64,6 +64,41 @@
             </div>
         </div>
 
+        <!-- Location Information -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>{{ __('Location Information') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ __('Location Status') }}:</strong>
+                            @if(isset($visit['location_status']))
+                                @if($visit['location_status'] === 'inside')
+                                    <span class="badge bg-success">
+                                        <i class="fa-solid fa-location-dot"></i> Inside (Within 100m)
+                                    </span>
+                                @elseif($visit['location_status'] === 'outside')
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fa-solid fa-location-crosshairs"></i> Outside (Beyond 100m)
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">N/A</span>
+                                @endif
+                            @else
+                                <span class="badge bg-secondary">N/A</span>
+                            @endif
+                        </p>
+                    </div>
+                    @if(isset($visit['distance_meters']))
+                    <div class="col-md-6">
+                        <p><strong>{{ __('Distance from Location') }}:</strong> {{ number_format($visit['distance_meters'], 2) }}m</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         @if(isset($visit['visitReport']))
         <!-- Visit Report -->
         <div class="card mb-3">

@@ -8,7 +8,7 @@ export const paramsValidator = [
 ];
 
 export const createTicketValidation = [
-    body('client_id').isInt().withMessage('Client ID must be an integer'),
+    body('client_phone').isString().notEmpty().withMessage('Client phone is required'),
     body('title').isString().notEmpty().withMessage('Title is required'),
     body('issue').isString().notEmpty().withMessage('Issue description is required'),
     body('priority')

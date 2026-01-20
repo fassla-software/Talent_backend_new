@@ -4,5 +4,7 @@ export interface ICreatePlumber {
   password: string;
   city: string;
   area: string;
- referralCode?: string;
+  referralCode?: string;
+  device_token?: string;
+  device_type?: string;
 }

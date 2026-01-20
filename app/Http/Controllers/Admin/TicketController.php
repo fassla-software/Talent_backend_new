@@ -10,13 +10,30 @@ class TicketController extends Controller
 {
     private $apiBaseUrl = 'https://app.talentindustrial.com/plumber/ticket';
 
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $response = Http::get($this->apiBaseUrl . '/all');
-            $tickets = $response->successful() ? $response->json() : [];
+            $page = $request->get('page', 1);
+            $params = [
+                'page' => $page,
+                'limit' => 20
+            ];
 
-            return view('admin.tickets.index', compact('tickets'));
+            if ($request->has('client_id')) {
+                $params['client_id'] = $request->get('client_id');
+            }
+
+            if ($request->has('inspector_id')) {
+                $params['inspector_id'] = $request->get('inspector_id');
+            }
+
+            $response = Http::get($this->apiBaseUrl . '/all', $params);
+            
+            $data = $response->successful() ? $response->json() : ['tickets' => [], 'pagination' => null];
+            $tickets = $data['tickets'] ?? [];
+            $pagination = $data['pagination'] ?? null;
+
+            return view('admin.tickets.index', compact('tickets', 'pagination'));
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to fetch tickets: ' . $e->getMessage());
         }

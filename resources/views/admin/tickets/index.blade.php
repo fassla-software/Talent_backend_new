@@ -67,6 +67,32 @@
                 </div>
             </div>
         </div>
+
+        @if($pagination && $pagination['totalPages'] > 1)
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <li class="page-item {{ $pagination['page'] == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ route('admin.ticket.index', ['page' => $pagination['page'] - 1]) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        
+                        @for($i = 1; $i <= $pagination['totalPages']; $i++)
+                            <li class="page-item {{ $pagination['page'] == $i ? 'active' : '' }}">
+                                <a class="page-link" href="{{ route('admin.ticket.index', ['page' => $i]) }}">{{ $i }}</a>
+                            </li>
+                        @endfor
+
+                        <li class="page-item {{ $pagination['page'] == $pagination['totalPages'] ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ route('admin.ticket.index', ['page' => $pagination['page'] + 1]) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        @endif
     </div>
 
     <!-- Edit Ticket Modal -->

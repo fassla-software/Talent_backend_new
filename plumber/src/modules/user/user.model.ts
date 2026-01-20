@@ -28,6 +28,7 @@ class User extends Model {
   public refer_code_used!: number;
   public otp!: string | null;
   public expiration_date!: Date | null;
+  public device_token!: string | null;
 
 
   // to view data
@@ -119,6 +120,10 @@ User.init(
     },
     expiration_date: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    device_token: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
 

@@ -33,6 +33,8 @@ interface PlumberAttributes {
   fixed_points: number;
   inspector_id?: number | null;
   status: PlumberAccountStatus;
+  latitude?: number | null;
+  longitude?: number | null;
   createdAt: Date;
   updatedAt: Date;
   user?: User;
@@ -76,6 +78,8 @@ class Plumber extends Model<PlumberAttributes, PlumberCreationAttributes> {
   public fixed_points?: number;
   public inspector_id?: number | null;
   public status!: PlumberAccountStatus;
+  public latitude?: number | null;
+  public longitude?: number | null;
 
   // Define the association explicitly
   public user?: User;
@@ -167,6 +171,16 @@ Plumber.init(
       type: DataTypes.ENUM('ACTIVE', 'INACTIVE', 'DORMANT', 'PENDING'),
       allowNull: false,
       defaultValue: 'PENDING',
+    },
+    latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: true,
+      defaultValue: null,
+    },
+    longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: true,
+      defaultValue: null,
     },
     createdAt: {
       type: DataTypes.DATE,

@@ -1,7 +1,7 @@
 import { TicketPriority } from '../ticket.model';
 
 export interface CreateTicketDto {
-    client_id: number;
+    client_phone: string;
     title: string;
     issue: string;
     files?: string[];

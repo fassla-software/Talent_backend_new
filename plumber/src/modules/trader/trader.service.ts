@@ -8,6 +8,7 @@ import HttpError from '../../utils/HttpError';
 import { IUpdatePlumber } from '../plumber/dto/update-plumber.dto';
 import { saveImages, viewImages } from '../../utils/imageUtils';
 import { PlumberStatus } from '../plumber/plumber.model';
+import { sendPushNotification } from '../../utils/notification';
 
 export const getTraderById = async (userId: number) => {
     const user = await User.findOne({ where: { id: userId } });
@@ -128,6 +129,13 @@ export const acceptTrader = async (userId: number) => {
     await traderUser.save();
     trader.is_verified = true;
     await trader.save();
+
+    // Trigger notification to envoy if exists
+    if (trader.inspector_id) {
+        const title = 'Registration Update';
+        const body = `The trader ${traderUser.name} you registered has been approved.`;
+        sendPushNotification(Number(trader.inspector_id), title, body);
+    }
 };
 
 export const rejectTrader = async (userId: number) => {
@@ -147,6 +155,13 @@ export const rejectTrader = async (userId: number) => {
     await traderUser.save();
     trader.is_verified = false;
     await trader.save();
+
+    // Trigger notification to envoy if exists
+    if (trader.inspector_id) {
+        const title = 'Registration Update';
+        const body = `The trader ${traderUser.name} you registered has been rejected.`;
+        sendPushNotification(Number(trader.inspector_id), title, body);
+    }
 };
 
 export const getProfile = async (id: string) => {

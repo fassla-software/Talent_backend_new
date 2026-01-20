@@ -63,7 +63,7 @@ InspectionVisit.init(
       },
     },
     trader_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT.UNSIGNED,
       allowNull: true,
       references: {
         model: 'traders',
@@ -73,7 +73,7 @@ InspectionVisit.init(
       onUpdate: 'CASCADE',
     },
     plumber_id: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       references: {
         model: 'plumbers',

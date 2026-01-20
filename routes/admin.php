@@ -46,10 +46,12 @@ use App\Http\Controllers\Admin\DistributorController;
 use App\Http\Controllers\Admin\DistributorCouponController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\TraderUsersController;
+use App\Http\Controllers\Admin\PlumberUsersController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\ReportDropdownController;
-use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\InspectionVisitController;
+use App\Http\Controllers\Admin\InspectionRequestController;
+use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\AwardController;
 
 /*
@@ -404,11 +406,23 @@ Route::name('admin.')->group(function () {
             Route::get('/employees', 'index')->name('employee.index');
             Route::get('/employee/create', 'create')->name('employee.create');
             Route::post('/employee/store', 'store')->name('employee.store');
+            Route::get('/employee/{user}', 'show')->name('employee.show');
             Route::put('/employee/{user}/update', 'update')->name('employee.update');
             Route::get('/employee/{user}/destroy', 'destroy')->name('employee.destroy');
             Route::post('employee/{user}/reset-password', 'resetPassword')->name('employee.reset-password');
             Route::get('/employee/{user}/permission', 'permission')->name('employee.permission');
             Route::post('/employee/{user}/permission', 'updatePermission')->name('employee.permission.update');
+        });
+
+        // Envoy Management Routes
+        Route::controller(\App\Http\Controllers\Admin\EnvoyController::class)->group(function () {
+            Route::get('/envoys', 'index')->name('envoy.index');
+            Route::get('/envoys/create', 'create')->name('envoy.create');
+            Route::post('/envoys', 'store')->name('envoy.store');
+            Route::get('/envoys/{user}', 'show')->name('envoy.show');
+            Route::get('/envoys/{user}/edit', 'edit')->name('envoy.edit');
+            Route::put('/envoys/{user}', 'update')->name('envoy.update');
+            Route::delete('/envoys/{user}', 'destroy')->name('envoy.destroy');
         });
 
         // role permission route
@@ -465,6 +479,8 @@ Route::name('admin.')->group(function () {
     // Trader Users routes
         Route::controller(TraderUsersController::class)->group(function () {
             Route::get('/traders', 'index')->name('traders');
+            Route::get('/traders/create', 'create')->name('traders.create');
+            Route::post('/traders/store', 'store')->name('traders.store');
             Route::get('/traders/{id}', 'show')->name('traders.show');
             Route::put('/traders/{id}/approve', 'approve')->name('traders.approve');
             Route::put('/traders/{id}/reject', 'reject')->name('traders.reject');
@@ -473,6 +489,12 @@ Route::name('admin.')->group(function () {
             Route::delete('/traders/bulk-delete', 'bulkDelete')->name('traders.bulk-delete');
             Route::get('/traders/{userId}/download', 'download')->name('traders.download');
 
+        });
+
+        // Plumber Users routes
+        Route::controller(PlumberUsersController::class)->group(function () {
+            Route::get('/plumber-users/create', 'create')->name('plumberUsers.create');
+            Route::post('/plumber-users/store', 'store')->name('plumberUsers.store');
         });
     
         // Report Dropdown Options routes
@@ -483,14 +505,22 @@ Route::name('admin.')->group(function () {
             Route::delete('/report-dropdowns/{id}', 'destroy')->name('reportDropdown.destroy');
         });
     
+        // Inspection Visits routes
+        Route::controller(InspectionVisitController::class)->group(function () {
+            Route::get('/inspection-visits', 'index')->name('inspectionVisit.index');
+            Route::get('/inspection-visits/{id}', 'show')->name('inspectionVisit.show');
+            Route::put('/inspection-visits/{id}/status', 'updateStatus')->name('inspectionVisit.updateStatus');
+        });
+
+
         // Tickets routes
         Route::controller(TicketController::class)->group(function () {
             Route::get('/tickets', 'index')->name('ticket.index');
-            Route::get('/tickets/{id}', 'show')->name('ticket.show');
             Route::put('/tickets/{id}', 'update')->name('ticket.update');
+            Route::get('/tickets/{id}', 'show')->name('ticket.show');
             Route::delete('/tickets/{id}', 'destroy')->name('ticket.destroy');
         });
-
+    
         // Awards routes
         Route::controller(AwardController::class)->group(function () {
             Route::get('/awards', 'index')->name('award.index');

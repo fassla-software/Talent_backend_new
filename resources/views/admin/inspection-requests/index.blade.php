@@ -315,6 +315,11 @@ $statusTexts = [
         color: #555;
     }
 
+    .item .count {
+        margin-left: 10px;
+        color: #555;
+    }
+
     .lightbox {
         display: none;
         position: fixed;
@@ -805,41 +810,30 @@ $statusTexts = [
                 confirmButtonText: 'Yes, delete them!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    performBulkDelete(selectedIds);
+                    deleteRequests(selectedIds);
                 }
             });
         });
 
-        function performBulkDelete(ids) {
+        function deleteRequests(ids) {
             fetch('https://app.talentindustrial.com/plumber/request/bulk-delete', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        ids: ids
-                    }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) {
-                        Swal.fire(
-                            'Deleted!',
-                            `${data.deletedCount} request(s) have been deleted successfully.`,
-                            'success'
-                        ).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire('Error', 'Failed to delete requests.', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Bulk delete error:', error);
-                    Swal.fire('Error', 'Something went wrong during deletion.', 'error');
-                });
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer YOUR_API_TOKEN',
+                },
+                body: JSON.stringify({ ids: ids }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.fire('Deleted!', 'The requests have been deleted.', 'success')
+                .then(() => window.location.reload());
+            })
+            .catch(error => {
+                console.error('Error deleting requests:', error);
+                Swal.fire('Error', 'Something went wrong while deleting.', 'error');
+            });
         }
     });
 </script>
-
 @endsection

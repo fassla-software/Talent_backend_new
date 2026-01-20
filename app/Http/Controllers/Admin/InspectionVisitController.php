@@ -18,10 +18,20 @@ class InspectionVisitController extends Controller
             $limit = $request->get('limit', 20);
             
             
-            $response = Http::get($this->apiBaseUrl . '/admin', [
+            $params = [
                 'page' => $page,
                 'limit' => $limit
-            ]);
+            ];
+
+            if ($request->has('trader_id')) {
+                $params['trader_id'] = $request->get('trader_id');
+            }
+
+            if ($request->has('plumber_id')) {
+                $params['plumber_id'] = $request->get('plumber_id');
+            }
+
+            $response = Http::get($this->apiBaseUrl . '/admin', $params);
 
             if ($response->successful()) {
                 $data = $response->json();

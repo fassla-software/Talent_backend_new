@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import Ticket, { TicketStatus } from './ticket.model';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import User from '../user/user.model';
@@ -6,6 +7,17 @@ import { saveImages, viewImages } from '../../utils/imageUtils';
 
 class TicketService {
     async createTicket(data: CreateTicketDto, inspector_id: number) {
+        const client = await User.findOne({
+            where: {
+                phone: {
+                    [Op.like]: `%${data.client_phone}%`,
+                },
+            },
+        });
+        if (!client) {
+            throw new HttpError('Client not found', 404);
+        }
+
         const year = new Date().getFullYear();
         const lastTicket = await Ticket.findOne({ order: [['id', 'DESC']] });
         const nextId = lastTicket ? lastTicket.id + 1 : 1;
@@ -13,6 +25,7 @@ class TicketService {
 
         const ticket = await Ticket.create({
             ...data,
+            client_id: client.id,
             code,
             inspector_id,
             files: data.files ? saveImages(data.files) : null,
@@ -22,17 +35,35 @@ class TicketService {
         return this.formatTicketResponse(ticket);
     }
 
-    async getAllTickets(filters: any = {}) {
-        const tickets = await Ticket.findAll({
-            where: filters,
+    async getAllTickets(query: any = {}) {
+        const page = parseInt(query.page) || 1;
+        const limit = parseInt(query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        const where: any = {};
+        if (query.client_id) where.client_id = query.client_id;
+        if (query.inspector_id) where.inspector_id = query.inspector_id;
+
+        const { count, rows: tickets } = await Ticket.findAndCountAll({
+            where,
             include: [
                 { model: User, as: 'inspector', attributes: ['id', 'name', 'phone'] },
                 { model: User, as: 'client', attributes: ['id', 'name', 'phone'] },
             ],
             order: [['created_at', 'DESC']],
+            limit,
+            offset,
         });
 
-        return tickets.map(ticket => this.formatTicketResponse(ticket));
+        return {
+            tickets: tickets.map(ticket => this.formatTicketResponse(ticket)),
+            pagination: {
+                total: count,
+                page,
+                limit,
+                totalPages: Math.ceil(count / limit),
+            },
+        };
     }
 
     async getTicketsByInspector(inspectorId: number, filters: any = {}) {

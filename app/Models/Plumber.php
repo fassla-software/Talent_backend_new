@@ -9,7 +9,21 @@ class Plumber extends Model
 {
     protected $table = 'plumbers';
 
-    protected $fillable = ['user_id', 'gift_points', 'fixed_points', 'nationality_id'];  // Only the user_id is fillable here
+    protected $fillable = [
+        'user_id',
+        'gift_points',
+        'fixed_points',
+        'nationality_id',
+        'inspector_id',
+        'city',
+        'area',
+        'nationality_image1',
+        'nationality_image2',
+        'is_verified',
+        'status',
+        'latitude',
+        'longitude',
+    ];
 
     public function user()
     {

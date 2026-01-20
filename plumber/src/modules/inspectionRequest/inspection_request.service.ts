@@ -18,6 +18,7 @@ import User from '../user/user.model';
 import { getPlumberCategories } from '../plumber/plumber.utils';
 import { getConfigService } from '../config/config.service';
 import { RequestFilterStatus } from './dto/request-filter-status.dto';
+import { sendPushNotification } from '../../utils/notification';
 
 const BASE_URL = getConfig('BASE_URL');
 export const addInspectionRequest = async (
@@ -145,13 +146,19 @@ export const getInspectionRequest = async (id: string) => {
 };
 
 export const getInspectionRequests = async (filter: IFilter) => {
-  const { status, limit = 10, skip = 0 } = filter;
+  const { status, limit = 10, skip = 0, requestor_id, inspector_id } = filter;
   console.log({ filter });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const conditions: any = {};
   if (status) {
     conditions.status = status;
+  }
+  if (requestor_id) {
+    conditions.requestor_id = requestor_id;
+  }
+  if (inspector_id) {
+    conditions.inspector_id = inspector_id;
   }
   const requestsWithItems = await InspectionRequest.findAll({
     where: conditions,
@@ -216,10 +223,16 @@ export const getUserRequests = async (id: string, role: string, filter: IFilter)
   const { area, city, plumber_name, status, user_name, limit = 10, skip = 0 } = filter;
   console.log({ filter });
 
+  // For Envoy: get all tasks assigned to them (by admin) OR created by them (from visit reports)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const conditions: any = {
-    [role === Roles.Envoy ? 'inspector_id' : 'requestor_id']: id,
-  };
+  const conditions: any =
+    role === Roles.Envoy
+      ? {
+        inspector_id: id, // All tasks assigned to this envoy
+      }
+      : {
+        requestor_id: id, // For plumber: only tasks they created
+      };
 
   if (status) {
     switch (status) {
@@ -263,7 +276,8 @@ export const getUserRequests = async (id: string, role: string, filter: IFilter)
         }
         break;
       default:
-        conditions.status = '';
+        // If no status filter is provided, don't filter by status
+        // This will return all requests for the user (both assigned by admin and created from next_action)
         break;
     }
   }
@@ -297,7 +311,14 @@ export const getUserRequests = async (id: string, role: string, filter: IFilter)
         model: User,
         as: 'requestor',
         attributes: ['name', 'phone'],
+        required: false, // Allow requests without requestor (e.g., from next_action)
         where: plumber_name ? { name: { [Op.like]: `%${plumber_name}%` } } : undefined,
+      },
+      {
+        model: User,
+        as: 'inspector',
+        attributes: ['name', 'phone'],
+        required: false,
       },
     ],
     limit: Number(limit),
@@ -309,10 +330,15 @@ export const getUserRequests = async (id: string, role: string, filter: IFilter)
   const requestObjects = await Promise.all(
     requestsWithItems.map(async request => {
       const requestObject = request.toJSON();
-      requestObject.plumber_name = requestObject.requestor.name;
-      requestObject.plumber_phone = requestObject.requestor.phone;
+      // If requestor is null (e.g., requests from next_action), use inspector data instead
+      requestObject.plumber_name = requestObject.requestor?.name || requestObject.inspector?.name || null;
+      requestObject.plumber_phone = requestObject.requestor?.phone || requestObject.inspector?.phone || null;
+
+      // Add flag to identify requests from visit reports (for UI differentiation)
+      requestObject.from_visit_report = !!requestObject.visit_report_id;
 
       delete requestObject.requestor;
+      delete requestObject.inspector;
 
       // Parse and format images
       requestObject.images = requestObject.images ? viewImages(JSON.parse(requestObject.images)) : [];
@@ -384,6 +410,11 @@ export const assignInspectionRequest = async (data: { request_id: string; inspec
     inspector_id,
     status: RequestStatus.ASSIGNED,
   });
+
+  // Trigger notification
+  const title = 'New Inspection Assigned';
+  const body = `A new inspection request for ${request.user_name} has been assigned to you in ${request.city}.`;
+  sendPushNotification(Number(inspector_id), title, body);
 
   return request;
 };
@@ -604,6 +635,13 @@ export const getInspectorPendingRequests = async (inspector_id: string, filter: 
         model: User,
         as: 'requestor',
         attributes: ['name', 'phone'],
+        required: false, // Allow requests without requestor (e.g., from next_action)
+      },
+      {
+        model: User,
+        as: 'inspector',
+        attributes: ['name', 'phone'],
+        required: false,
       },
     ],
     limit: Number(limit),
@@ -615,10 +653,161 @@ export const getInspectorPendingRequests = async (inspector_id: string, filter: 
   const requestObjects = await Promise.all(
     requestsWithItems.map(async request => {
       const requestObject = request.toJSON();
-      requestObject.plumber_name = requestObject.requestor.name;
-      requestObject.plumber_phone = requestObject.requestor.phone;
+      // If requestor is null (e.g., requests from next_action), use inspector data instead
+      requestObject.plumber_name = requestObject.requestor?.name || requestObject.inspector?.name || null;
+      requestObject.plumber_phone = requestObject.requestor?.phone || requestObject.inspector?.phone || null;
+
+      // Add flag to identify requests from visit reports (for UI differentiation)
+      requestObject.from_visit_report = !!requestObject.visit_report_id;
 
       delete requestObject.requestor;
+      delete requestObject.inspector;
+
+      // Parse and format images
+      requestObject.images = requestObject.images ? viewImages(JSON.parse(requestObject.images)) : [];
+      requestObject.inspection_images = requestObject.inspection_images
+        ? viewImages(JSON.parse(requestObject.inspection_images))
+        : [];
+
+      // Calculate distance if coordinates are available
+      if (
+        requestObject.user_lat &&
+        requestObject.user_long &&
+        requestObject.inspection_lat &&
+        requestObject.inspection_long
+      ) {
+        requestObject.distance = haversineDistance(
+          requestObject.user_lat,
+          requestObject.user_long,
+          requestObject.inspection_lat,
+          requestObject.inspection_long,
+        );
+      } else {
+        requestObject.distance = null;
+      }
+
+      // Remove sensitive coordinates
+      delete requestObject.user_lat;
+      delete requestObject.user_long;
+      delete requestObject.inspection_lat;
+      delete requestObject.inspection_long;
+
+      // Fetch and attach categories
+      const categories = await getPlumberCategories();
+      if (requestObject.items) {
+        requestObject.items = requestObject.items.map((item: InspectionRequestItem) => {
+          const subcategory = item.subcategory;
+          const parentCategories = getAllParents(categories, subcategory.id);
+          const parentNames = parentCategories
+            .reverse()
+            .map(parent => parent.name)
+            .join(' > ');
+          const fullName = `${parentNames} > ${subcategory.name}`;
+
+          return {
+            ...item,
+            subcategory: {
+              ...subcategory,
+              name: fullName,
+              image: subcategory.image ? viewImages(subcategory.image) : '',
+            },
+          };
+        });
+      }
+
+      return requestObject;
+    }),
+  );
+
+  return requestObjects;
+};
+
+export const getInspectorOverdueRequests = async (inspector_id: string, filter: IFilter) => {
+  const { area, city, user_name, limit = 10, skip = 0 } = filter;
+
+  // Calculate the date 24 hours ago from now
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Tasks are overdue if:
+  // 1. inspection_date is more than 24 hours ago
+  // 2. Status is not completed (not ACCEPTED, REJECTED, APPROVED, CANCELLED)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conditions: any = {
+    inspector_id: inspector_id,
+    inspection_date: {
+      [Op.lt]: twentyFourHoursAgo, // inspection_date is more than 24 hours ago
+    },
+    status: {
+      [Op.notIn]: [
+        RequestStatus.ACCEPTED,
+        RequestStatus.REJECTED,
+        RequestStatus.APPROVED,
+        RequestStatus.CANCELLED,
+      ], // Not completed yet
+    },
+  };
+
+  if (area) {
+    conditions.area = { [Op.like]: `%${area}%` };
+  }
+  if (city) {
+    conditions.city = { [Op.like]: `%${city}%` };
+  }
+  if (user_name) {
+    conditions.user_name = { [Op.like]: `%${user_name}%` };
+  }
+
+  // Fetch requests with items and related data
+  const requestsWithItems = await InspectionRequest.findAll({
+    where: conditions,
+    include: [
+      {
+        model: InspectionRequestItem,
+        as: 'items',
+        include: [
+          {
+            model: PlumberCategory,
+            as: 'subcategory',
+          },
+        ],
+      },
+      {
+        model: User,
+        as: 'requestor',
+        attributes: ['name', 'phone'],
+        required: false,
+      },
+      {
+        model: User,
+        as: 'inspector',
+        attributes: ['name', 'phone'],
+        required: false,
+      },
+    ],
+    limit: Number(limit),
+    offset: Number(skip),
+    order: [['inspection_date', 'ASC']], // Order by oldest inspection_date first
+  });
+
+  // Transform the fetched data
+  const requestObjects = await Promise.all(
+    requestsWithItems.map(async request => {
+      const requestObject = request.toJSON();
+      // If requestor is null (e.g., requests from next_action), use inspector data instead
+      requestObject.plumber_name = requestObject.requestor?.name || requestObject.inspector?.name || null;
+      requestObject.plumber_phone = requestObject.requestor?.phone || requestObject.inspector?.phone || null;
+
+      // Add flag to identify requests from visit reports
+      requestObject.from_visit_report = !!requestObject.visit_report_id;
+
+      // Calculate hours overdue
+      const inspectionDate = new Date(requestObject.inspection_date);
+      const hoursOverdue = Math.floor((now.getTime() - inspectionDate.getTime()) / (1000 * 60 * 60));
+      requestObject.hours_overdue = hoursOverdue;
+
+      delete requestObject.requestor;
+      delete requestObject.inspector;
 
       // Parse and format images
       requestObject.images = requestObject.images ? viewImages(JSON.parse(requestObject.images)) : [];

@@ -61,24 +61,44 @@ export const submitVisitReportValidation = [
     .notEmpty()
     .withMessage('inspection_visit_id is required'),
   // Customer Information
+  // customer_name and phone are optional if trader_id exists (will be fetched from trader)
   body('customer_name')
+    .optional()
     .isString()
-    .withMessage('customer_name must be a string')
-    .notEmpty()
-    .withMessage('customer_name is required'),
+    .withMessage('customer_name must be a string'),
+  // company_name, location, and email are optional if trader_id or plumber_id exists (will be fetched from trader/plumber)
   body('company_name').optional().isString().withMessage('company_name must be a string'),
   body('location')
+    .optional()
     .isString()
-    .withMessage('location must be a string')
-    .notEmpty()
-    .withMessage('location is required'),
+    .withMessage('location must be a string'),
   body('region_province').optional().isString().withMessage('region_province must be a string'),
   body('phone')
+    .optional()
     .isString()
-    .withMessage('phone must be a string')
-    .notEmpty()
-    .withMessage('phone is required'),
-  body('email').optional().isEmail().withMessage('email must be a valid email address'),
+    .withMessage('phone must be a string'),
+  // Validate that either trader_id/plumber_id exists OR customer_name, phone, and location are provided
+  body()
+    .custom((value, { req }) => {
+      // If trader_id or plumber_id exists in the visit, customer_name, phone, location, email, and company_name are not required
+      // (they will be fetched from trader/plumber data)
+      // This validation will be handled in the service
+      return true;
+    }),
+  body('email')
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      // Allow empty string, null, or undefined
+      if (value === null || value === undefined || value === '') {
+        return true;
+      }
+      // If provided, must be a valid email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        throw new Error('email must be a valid email address');
+      }
+      return true;
+    }),
   body('client_type').optional().isString().withMessage('client_type must be a string'),
   body('visit_type').optional().isString().withMessage('visit_type must be a string'),
   // Visit Details

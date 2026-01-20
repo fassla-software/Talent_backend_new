@@ -49,6 +49,7 @@ use App\Models\Plumber;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InspectionRequestController;
 
 use App\Http\Controllers\Admin\DashboardAnalysisController;
 
@@ -209,6 +210,10 @@ Route::get('/admin/plumber-users/{id}/edit', [PlumberUsersController::class, 'ed
 Route::patch('/admin/update/{id}', [PlumberUsersController::class, 'update'])->name('admin.plumberUsers.update');
 Route::delete('/admin/plumber/destroy/{id}', [PlumberUsersController::class, 'destroy'])->name('admin.plumberUsers.destroy');
 
+// Inspection Requests routes
+Route::get('/admin/inspection-requests', [InspectionRequestController::class, 'index'])->name('admin.inspectionRequest.index');
+Route::get('/admin/inspection-requests/{id}', [InspectionRequestController::class, 'show'])->name('admin.inspectionRequest.show');
+
 
 Route::put('/segments/update-withdraw-points', [SegmentController::class, 'updateWithdrawPoints'])->name('segments.updateWithdrawPoints');
 Route::put('/segments/{id}', [SegmentController::class, 'update'])->name('segments.update');
@@ -222,13 +227,6 @@ Route::get('/points', [GiftController::class, 'pointsPage'])->name('points.index
 Route::post('/gift/store', [GiftController::class, 'store'])->name('gift.store');
 Route::delete('/gift/destroy/{id}', [GiftController::class, 'destroy'])->name('gift.destroy');
 
-
-use App\Http\Controllers\Admin\NewPageController;
-
-Route::get('/proxy-image', [NewPageController::class, 'proxyImage'])->name('proxy.image');
-
-// Correct route definition
-Route::get('admin/new-page', [\App\Http\Controllers\Admin\NewPageController::class, 'index'])->name('admin.newPage.index');
 
 // Change language
 Route::get('/change-language', function () {
