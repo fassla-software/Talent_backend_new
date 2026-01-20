@@ -8,8 +8,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
-class NewPageController extends Controller
+class InspectionRequestController extends Controller
 {
     public function index()
     {
@@ -17,7 +18,28 @@ class NewPageController extends Controller
             $query->where('name', 'envoy');
         })->get();
 
-        $apiUrl = 'https://app.talentindustrial.com/plumber/request?limit=50000000&skip=0';
+        $queryParams = [
+            'limit' => 50000000,
+            'skip' => 0,
+        ];
+
+        if (request()->has('requestor_id')) {
+            $queryParams['requestor_id'] = request('requestor_id');
+        }
+
+        if (request()->has('inspector_id')) {
+            $queryParams['inspector_id'] = request('inspector_id');
+        }
+        
+        if (request()->has('assigned_to')) {
+             $queryParams['inspector_id'] = request('assigned_to');
+        }
+
+        if (request()->has('status') && request('status') != '') {
+            $queryParams['status'] = request('status');
+        }
+
+        $apiUrl = 'https://app.talentindustrial.com/plumber/request?' . http_build_query($queryParams);
 
         try {
             $response = Http::get($apiUrl);
@@ -120,7 +142,7 @@ class NewPageController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        return view('admin.newPage', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses'));
+        return view('admin.inspection-requests.index', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses'));
     }
 
     // ✅ Function to Store Only New "SEND" Requests as Notifications
@@ -144,6 +166,24 @@ class NewPageController extends Controller
                     'read' => false,
                 ]);
             }
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $response = Http::get('https://app.talentindustrial.com/plumber/request/' . $id);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return view('admin.inspection-requests.show', [
+                    'request' => $data['requests']
+                ]);
+            }
+
+            return back()->with('error', 'Inspection request not found');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 }

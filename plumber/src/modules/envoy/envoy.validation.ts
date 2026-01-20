@@ -19,3 +19,10 @@ export const registerUserByEnvoyValidation = [
     handleValidationErrors,
     strict,
 ];
+
+export const createNoteValidation = [
+    body('client_id').notEmpty().withMessage('Client ID is required').isNumeric().withMessage('Client ID must be a number'),
+    body('content').notEmpty().withMessage('Content is required').isString().withMessage('Content must be a string'),
+    handleValidationErrors,
+    strict,
+];

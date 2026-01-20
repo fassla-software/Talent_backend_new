@@ -22,8 +22,8 @@ class TicketController {
     }, 'Failed to create ticket');
 
     getTickets = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-        const tickets = await ticketService.getAllTickets(req.query);
-        res.status(200).json(tickets);
+        const result = await ticketService.getAllTickets(req.query);
+        res.status(200).json(result);
     }, 'Failed to get tickets');
 
     getMyTickets = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {

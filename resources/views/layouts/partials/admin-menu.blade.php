@@ -81,8 +81,8 @@
 @hasPermission('plumber.request.view')
 
 <li>
-    <a class="menu {{ $request->routeIs('admin.newPage.index') ? 'active' : '' }}"
-        href="{{ route('admin.newPage.index') }}">
+    <a class="menu {{ $request->routeIs('admin.inspectionRequest.index') ? 'active' : '' }}"
+        href="{{ route('admin.inspectionRequest.index') }}">
         <span>
             <i class="fa-solid fa-clipboard-list menu-icon"></i> <!-- Icon for Requests -->
             {{ __('Requests') }}
@@ -157,6 +157,22 @@
         <span>
             <i class="fa-solid fa-handshake menu-icon"></i>
             {{ __('Traders List') }}
+        </span>
+    </a>
+</li>
+@endhasPermission
+
+<li class="menu-divider">
+    <span class="menu-title">{{ __('Envoys') }}</span>
+</li>
+
+@hasPermission('plumber.user.view')
+<li>
+    <a class="menu {{ $request->routeIs('admin.envoy.index') ? 'active' : '' }}"
+        href="{{ route('admin.envoy.index') }}">
+        <span>
+            <i class="fa-solid fa-user-tie menu-icon"></i>
+            {{ __('Envoys List') }}
         </span>
     </a>
 </li>
@@ -460,7 +476,7 @@
         href="{{ route('admin.inspectionVisit.index') }}">
         <span>
             <i class="fa-solid fa-clipboard-check menu-icon"></i>
-            {{ __('Inspection Visits') }}
+            {{ __('Sales and Marketing Visits') }}
         </span>
     </a>
 </li>

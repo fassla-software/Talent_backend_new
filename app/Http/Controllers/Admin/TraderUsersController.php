@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class TraderUsersController extends Controller
 {
@@ -76,7 +80,88 @@ class TraderUsersController extends Controller
             ->latest()
             ->paginate(20);
 
-        return view('admin.traderUsers', compact('traders', 'allCities', 'availableMonths'));
+        $envoys = User::role('envoy')->get(); // Fetch all envoys
+        return view('admin.traderUsers', compact('traders', 'allCities', 'availableMonths', 'envoys'));
+    }
+
+    public function create()
+    {
+        $envoys = User::role('envoy')->get();
+        return view('admin.traders.create', compact('envoys'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|unique:users,phone',
+            'password' => 'required|string|min:6',
+            'city' => 'required|string',
+            'area' => 'required|string',
+            'nationality_id' => 'nullable|string',
+            'inspector_id' => 'nullable|exists:users,id',
+            'nationality_image1' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'nationality_image2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Create User
+            $user = User::create([
+                'name' => $request->name,
+                'phone' => $request->phone,
+                'password' => Hash::make($request->password),
+                'is_active' => true,
+                'phone_verified_at' => now(),
+                'refer_code' => Str::upper(Str::random(5)),
+                'status' => 'PENDING',
+            ]);
+
+            $user->assignRole('trader');
+
+            // Handle File Uploads
+            $nationalityImage1 = null;
+            $nationalityImage2 = null;
+
+            if ($request->hasFile('nationality_image1')) {
+            $file = $request->file('nationality_image1');
+            $filename = 'optimized-' . time() . '_1_' . $file->getClientOriginalName();
+            $file->move(base_path('plumber/uploads'), $filename);
+            $nationalityImage1 = $filename;
+        }
+
+        if ($request->hasFile('nationality_image2')) {
+            $file = $request->file('nationality_image2');
+            $filename = 'optimized-' . time() . '_2_' . $file->getClientOriginalName();
+            $file->move(base_path('plumber/uploads'), $filename);
+            $nationalityImage2 = $filename;
+        }
+
+            // Create Trader
+            Trader::create([
+                'user_id' => $user->id,
+                'city' => $request->city,
+                'area' => $request->area,
+                'nationality_id' => $request->nationality_id,
+                'nationality_image1' => $nationalityImage1,
+                'nationality_image2' => $nationalityImage2,
+                'inspector_id' => $request->inspector_id,
+                'status' => 'PENDING',
+                'is_verified' => true,
+            ]);
+
+            DB::commit();
+
+            // Send SMS
+            $message = "Welcome to Talanet! You have been registered successfully. Your credentials: Phone: {$request->phone}, Password: {$request->password}.";
+            $this->sendSMS($request->phone, $message);
+
+            return redirect()->route('admin.traders')->with('success', 'Trader created successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to create trader: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function approve(Request $request, $id)
@@ -180,6 +265,7 @@ class TraderUsersController extends Controller
             'phone' => 'nullable',
             'points' => 'nullable|integer|min:0',
             'nationality_id' => 'nullable|string|regex:/^\d{14}$/',
+            'inspector_id' => 'nullable|exists:users,id',
         ]);
 
         $user = User::find($id);
@@ -199,6 +285,7 @@ class TraderUsersController extends Controller
             $trader->update([
                 'nationality_id' => $data['nationality_id'],
                 'points' => $data['points'],
+                'inspector_id' => $data['inspector_id'] ?? $trader->inspector_id,
             ]);
         }
 

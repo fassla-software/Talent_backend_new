@@ -17,9 +17,19 @@
             </h1>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.plumberUsers') }}" class="btn btn-outline-secondary btn-lg rounded-pill px-4 shadow-sm transition-hover">
+            <a href="{{ route('admin.inspectionVisit.index', ['plumber_id' => $plumber->id]) }}" class="btn btn-primary rounded-pill px-4 shadow-sm transition-hover">
+                <i class="fa fa-calendar-check me-2"></i> View Visits
+            </a>
+            <a href="{{ route('admin.ticket.index', ['client_id' => $plumber->user_id]) }}" class="btn btn-info rounded-pill px-4 shadow-sm transition-hover">
+                <i class="fa fa-ticket-alt me-2"></i> View Tickets
+            </a>
+            <a href="{{ route('admin.inspectionRequest.index', ['requestor_id' => $plumber->user_id]) }}" class="btn btn-success rounded-pill px-4 shadow-sm transition-hover">
+                <i class="fa fa-clipboard-check me-2"></i> View Inspection Requests
+            </a>
+            <a href="{{ route('admin.plumberUsers') }}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm transition-hover">
                 <i class="fa fa-arrow-left me-2"></i> Back
             </a>
+        </div>
             @if($plumber->user->status === 'PENDING')
                 <div class="btn-group shadow-sm rounded-pill overflow-hidden">
                     <form action="{{ route('admin.plumberUsers.approve', $plumber->id) }}" method="POST">
@@ -39,7 +49,6 @@
                 </div>
             @endif
         </div>
-    </div>
 
     <div class="row g-4">
         <!-- Sidebar: Quick Overview -->

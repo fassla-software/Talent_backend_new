@@ -2,6 +2,8 @@ import { Op } from 'sequelize';
 import Trader, { TraderActivityStatus } from '../trader/trader.model';
 import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
 import VisitReport from '../inspectionVisit/visit-report.model';
+import InspectionVisit, { VisitStatus } from '../inspectionVisit/inspection-visit.model';
+import EnvoySetting from './envoy.model';
 import ClientStatusHistory, { ClientType } from '../statusHistory/status-history.model';
 
 export type TimePeriodType = 'week' | 'month' | 'quarter' | 'year';
@@ -253,10 +255,10 @@ export const getSalesStats = async (
         const amount = Number(sale.sales_value || 0);
         totalAmount += amount;
 
-        if (sale.sales_classification === 'direct') {
+        if (sale.sales_classification === 'direct_sales') {
             directAmount += amount;
             directCount++;
-        } else if (sale.sales_classification === 'indirect') {
+        } else if (sale.sales_classification === 'indirect_sales') {
             indirectAmount += amount;
             indirectCount++;
         }
@@ -271,11 +273,68 @@ export const getSalesStats = async (
         direct: {
             amount: Number(directAmount.toFixed(2)),
             count: directCount,
+            percentage: totalAmount > 0 ? Number(((directAmount / totalAmount) * 100).toFixed(2)) : 0,
         },
         indirect: {
             amount: Number(indirectAmount.toFixed(2)),
             count: indirectCount,
+            percentage: totalAmount > 0 ? Number(((indirectAmount / totalAmount) * 100).toFixed(2)) : 0,
         },
+    };
+};
+
+/**
+ * Calculate overview statistics - total counts
+ */
+export const getOverviewStats = async (
+    inspectorId: number,
+    period: TimePeriod
+) => {
+    const where = { inspector_id: inspectorId };
+
+    const [
+        activeTraders, inactiveTraders, dormantTraders, pendingTraders,
+        activePlumbers, inactivePlumbers, dormantPlumbers, pendingPlumbers,
+        totalVisits, approvedVisits, envoySetting
+    ] = await Promise.all([
+        Trader.count({ where: { ...where, status: TraderActivityStatus.ACTIVE } }),
+        Trader.count({ where: { ...where, status: TraderActivityStatus.INACTIVE } }),
+        Trader.count({ where: { ...where, status: TraderActivityStatus.DORMANT } }),
+        Trader.count({ where: { ...where, status: TraderActivityStatus.PENDING } }),
+        Plumber.count({ where: { ...where, status: PlumberAccountStatus.ACTIVE } }),
+        Plumber.count({ where: { ...where, status: PlumberAccountStatus.INACTIVE } }),
+        Plumber.count({ where: { ...where, status: PlumberAccountStatus.DORMANT } }),
+        Plumber.count({ where: { ...where, status: PlumberAccountStatus.PENDING } }),
+        InspectionVisit.count({
+            where: {
+                inspector_id: inspectorId,
+                createdAt: {
+                    [Op.between]: [period.start_date, period.end_date],
+                },
+            },
+        }),
+        InspectionVisit.count({
+            where: {
+                inspector_id: inspectorId,
+                status: VisitStatus.APPROVED,
+                createdAt: {
+                    [Op.between]: [period.start_date, period.end_date],
+                },
+            },
+        }),
+        EnvoySetting.findOne({ where: { user_id: inspectorId } }),
+    ]);
+
+    return {
+        total_clients: activeTraders + inactiveTraders + dormantTraders + pendingTraders +
+            activePlumbers + inactivePlumbers + dormantPlumbers + pendingPlumbers,
+        active_count: activeTraders + activePlumbers,
+        inactive_count: inactiveTraders + inactivePlumbers,
+        dormant_count: dormantTraders + dormantPlumbers,
+        pending_count: pendingTraders + pendingPlumbers,
+        total_visits: totalVisits,
+        approved_visits: approvedVisits,
+        target: envoySetting?.target || 0,
     };
 };
 
@@ -289,10 +348,11 @@ export const getEnvoyStatistics = async (
 ) => {
     const period = getTimePeriod(periodType, date);
 
-    const [conversion, retention, sales] = await Promise.all([
+    const [conversion, retention, sales, overview] = await Promise.all([
         getConversionStats(inspectorId, period),
         getRetentionStats(inspectorId, period),
         getSalesStats(inspectorId, period),
+        getOverviewStats(inspectorId, period),
     ]);
 
     return {
@@ -301,6 +361,7 @@ export const getEnvoyStatistics = async (
             start_date: period.start_date.toISOString().split('T')[0],
             end_date: period.end_date.toISOString().split('T')[0],
         },
+        overview,
         conversion,
         retention,
         sales,

@@ -7,7 +7,16 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold">Trader Details</h3>
         <div>
-            <a href="{{ route('admin.traders') }}" class="btn btn-outline-secondary me-2">
+            <a href="{{ route('admin.inspectionVisit.index', ['trader_id' => $trader->id]) }}" class="btn btn-primary me-2">
+                <i class="bi bi-calendar-check"></i> View Visits
+            </a>
+            <a href="{{ route('admin.ticket.index', ['client_id' => $trader->user_id]) }}" class="btn btn-info me-2">
+                <i class="bi bi-ticket-perforated"></i> View Tickets
+            </a>
+            <a href="{{ route('admin.inspectionRequest.index', ['requestor_id' => $trader->user_id]) }}" class="btn btn-success me-2">
+                <i class="bi bi-clipboard-check"></i> View Inspection Requests
+            </a>
+            <a href="{{ route('admin.traders') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

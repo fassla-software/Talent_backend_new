@@ -8,6 +8,7 @@ class EnvoySetting extends Model {
     public weight!: number;
     public target!: number;
     public salary!: number;
+    public incentives!: number;
     public region!: string | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -39,6 +40,10 @@ EnvoySetting.init(
             defaultValue: 0,
         },
         salary: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
+        incentives: {
             type: DataTypes.INTEGER,
             defaultValue: 0,
         },

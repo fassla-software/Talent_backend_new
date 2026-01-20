@@ -35,8 +35,10 @@ class InspectionRequest extends Model {
   public inspection_date!: Date;
   public description?: string | null;
   public comment?: string | null;
+  public note?: string | null;
   public images?: string[] | null;
   public status?: RequestStatus;
+  public visit_report_id?: number | null; // Link to visit report if created from visit
   public createdAt!: Date;
   public updatedAt!: Date;
 
@@ -135,6 +137,10 @@ InspectionRequest.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    note: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     images: {
       type: DataTypes.JSON,
       allowNull: true,
@@ -171,6 +177,16 @@ InspectionRequest.init(
           ],
         ],
       },
+    },
+    visit_report_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'report_visits',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
     },
   },
   {

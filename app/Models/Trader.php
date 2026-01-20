@@ -32,6 +32,10 @@ class Trader extends Model
         'instant_withdrawal',
         'withdraw_money',
         'points',
+        'inspector_id',
+        'status',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
     <div class="d-flex align-items-center flex-wrap gap-3 justify-content-between px-3">
-        <h4>{{ __('Inspection Visits') }}</h4>
+        <h4>{{ __('Sales and Marketing Visits') }}</h4>
     </div>
 
     <div class="container-fluid mt-3">
@@ -13,7 +13,6 @@
                 <div class="table-responsive">
                     <table class="table border table-responsive-md">
                         <thead>
-                            <tr>
                                 <th>{{ __('ID') }}</th>
                                 <th>{{ __('Customer') }}</th>
                                 <th>{{ __('Company') }}</th>
@@ -21,6 +20,7 @@
                                 <th>{{ __('Date') }}</th>
                                 <th>{{ __('Status') }}</th>
                                 <th>{{ __('Visit Result') }}</th>
+                                <th>{{ __('Location') }}</th>
                                 <th class="text-center">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
@@ -38,6 +38,23 @@
                                         </span>
                                     </td>
                                     <td>{{ $visit['visit_result'] ?? '-' }}</td>
+                                    <td>
+                                        @if(isset($visit['location_status']))
+                                            @if($visit['location_status'] === 'inside')
+                                                <span class="badge bg-success">
+                                                    <i class="fa-solid fa-location-dot"></i> Inside
+                                                </span>
+                                            @elseif($visit['location_status'] === 'outside')
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fa-solid fa-location-crosshairs"></i> Outside
+                                                </span>
+                                            @else
+                                                <span class="badge bg-secondary">N/A</span>
+                                            @endif
+                                        @else
+                                            <span class="badge bg-secondary">N/A</span>
+                                        @endif
+                                    </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-2 justify-content-center">
                                             <a href="{{ route('admin.inspectionVisit.show', $visit['id']) }}" 
@@ -59,7 +76,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-center" colspan="8">{{ __('No visits found') }}</td>
+                                    <td class="text-center" colspan="9">{{ __('No visits found') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

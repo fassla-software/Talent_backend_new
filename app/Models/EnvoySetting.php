@@ -13,6 +13,7 @@ class EnvoySetting extends Model
         'weight',
         'target',
         'salary',
+        'incentives',
         'region',
     ];
 

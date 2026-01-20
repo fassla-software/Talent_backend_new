@@ -10,6 +10,7 @@ import InspectionRequest, { RequestStatus } from '../inspectionRequest/inspectio
 import InspectionRequestItem from '../inspectionRequest/inspection_request-items.model';
 import { logStatusChange } from '../statusHistory/status-history.service';
 import { ClientType } from '../statusHistory/status-history.model';
+import { sendPushNotification } from '../../utils/notification';
 
 export interface ICheckInData {
   latitude: number;
@@ -52,46 +53,87 @@ export interface ISubmitVisitReportData {
 }
 
 /**
+ * Calculate distance between two coordinates using simplified formula
+ * @returns distance in meters
+ * Note: This is an approximation that works well for short distances (< 100km)
+ */
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  // Average Earth radius in meters
+  const earthRadius = 6371000;
+
+  // Convert degrees to radians
+  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+
+  // Convert latitude and longitude differences to radians
+  const latDiff = toRadians(lat2 - lat1);
+  const lonDiff = toRadians(lon2 - lon1);
+
+  // Convert average latitude to radians for longitude adjustment
+  const avgLat = toRadians((lat1 + lat2) / 2);
+
+  // Calculate distance using Pythagorean theorem
+  // Adjust longitude difference by cosine of average latitude
+  const x = lonDiff * Math.cos(avgLat);
+  const y = latDiff;
+
+  // Calculate straight-line distance
+  const distance = Math.sqrt(x * x + y * y) * earthRadius;
+
+  return distance;
+}
+
+/**
  * Check-in for an inspection visit
  */
 export const checkIn = async (inspectorId: number, data: ICheckInData) => {
   const { latitude, longitude, trader_id, plumber_id } = data;
 
-  // Check if already checked in
-  const existingVisit = await InspectionVisit.findOne({
+  // Check if there is an active visit (checked in but not checked out)
+  const activeVisit = await InspectionVisit.findOne({
     where: {
       ...(trader_id ? { trader_id } : {}),
       ...(plumber_id ? { plumber_id } : {}),
       inspector_id: inspectorId,
+      check_out_at: null,
     },
   });
 
-  if (existingVisit && existingVisit.isCheckedIn()) {
-    throw new HttpError('Already checked in for this inspection', 422);
+  if (activeVisit) {
+    throw new HttpError('Already checked in for an active visit with this client', 422);
   }
 
-  if (existingVisit) {
-    // Update existing record
-    await existingVisit.update({
-      check_in_at: new Date(),
-      check_in_latitude: latitude,
-      check_in_longitude: longitude,
-      trader_id: trader_id || null,
-      plumber_id: plumber_id || null,
-    });
-    return existingVisit;
-  } else {
-    // Create new check-in record
-    const visit = await InspectionVisit.create({
-      inspector_id: inspectorId,
-      trader_id: trader_id || null,
-      plumber_id: plumber_id || null,
-      check_in_at: new Date(),
-      check_in_latitude: latitude,
-      check_in_longitude: longitude,
-    });
-    return visit;
+  // Always create a new check-in record
+  const visit = await InspectionVisit.create({
+    inspector_id: inspectorId,
+    trader_id: trader_id || null,
+    plumber_id: plumber_id || null,
+    check_in_at: new Date(),
+    check_in_latitude: latitude,
+    check_in_longitude: longitude,
+  });
+
+  // Set trader/plumber location on first visit (if not already set)
+  if (trader_id) {
+    const trader = await Trader.findByPk(trader_id);
+    if (trader && trader.latitude === null && trader.longitude === null) {
+      await trader.update({
+        latitude: latitude,
+        longitude: longitude,
+      });
+    }
   }
+
+  if (plumber_id) {
+    const plumber = await Plumber.findByPk(plumber_id);
+    if (plumber && plumber.latitude === null && plumber.longitude === null) {
+      await plumber.update({
+        latitude: latitude,
+        longitude: longitude,
+      });
+    }
+  }
+
+  return visit;
 };
 
 /**
@@ -127,6 +169,9 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
   // Get customer data from trader_id or plumber_id instead of body
   let customerName = visitData.customer_name;
   let customerPhone = visitData.phone;
+  let customerEmail = visitData.email;
+  let customerLocation = ''; // Will be set from trader/plumber, not from body
+  let companyName = visitData.company_name;
   let customerNationalityId = '';
 
   if (traderId) {
@@ -135,7 +180,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
         {
           model: User,
           as: 'user',
-          attributes: ['name', 'phone'],
+          attributes: ['name', 'phone', 'email'],
         },
       ],
     });
@@ -151,6 +196,9 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     // Use trader user data instead of body data
     customerName = trader.user.name;
     customerPhone = trader.user.phone;
+    customerEmail = trader.user.email || '';
+    customerLocation = `${trader.area}, ${trader.city}`; // Build location from area and city
+    companyName = trader.user.name; // Use user name as company name
     customerNationalityId = trader.nationality_id || ''; // Get from trader, not user
 
     // Update trader status if sales_value is present
@@ -172,7 +220,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
         {
           model: User,
           as: 'user',
-          attributes: ['name', 'phone'],
+          attributes: ['name', 'phone', 'email'],
         },
       ],
     });
@@ -188,6 +236,9 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     // Use plumber user data instead of body data
     customerName = plumber.user.name;
     customerPhone = plumber.user.phone;
+    customerEmail = plumber.user.email || '';
+    customerLocation = `${plumber.area}, ${plumber.city}`; // Build location from area and city
+    companyName = plumber.user.name; // Use user name as company name
     customerNationalityId = plumber.nationality_id || ''; // Get from plumber, not user
 
     // Update plumber status if sales_value is present
@@ -204,10 +255,15 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       );
     }
   } else {
-    // If no trader_id or plumber_id, customer_name and phone must be provided in body
-    if (!visitData.customer_name || !visitData.phone) {
-      throw new HttpError('customer_name and phone are required when trader_id or plumber_id is not provided', 400);
+    // If no trader_id or plumber_id, customer_name, phone, and location must be provided in body
+    if (!visitData.customer_name || !visitData.phone || !visitData.location) {
+      throw new HttpError(
+        'customer_name, phone, and location are required when trader_id or plumber_id is not provided',
+        400,
+      );
     }
+    // Use location from body only if trader/plumber not found
+    customerLocation = visitData.location;
   }
 
   // Save images if provided
@@ -222,12 +278,12 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       id: visit.report_id || undefined,
       trader_id: traderId || undefined,
       plumber_id: plumberId || undefined,
-      customer_name: customerName, // Use data from trader instead of body
-      company_name: visitData.company_name,
-      location: visitData.location,
+      customer_name: customerName, // Use data from trader/plumber instead of body
+      company_name: companyName, // Use data from trader/plumber instead of body
+      location: customerLocation, // Use data from trader/plumber instead of body
       region_province: visitData.region_province,
-      phone: customerPhone, // Use data from trader instead of body
-      email: visitData.email,
+      phone: customerPhone, // Use data from trader/plumber instead of body
+      email: customerEmail, // Use data from trader/plumber instead of body
       client_type: visitData.client_type,
       visit_type: visitData.visit_type,
       visit_result: visitData.visit_result,
@@ -256,10 +312,28 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
 
   // If next_action is provided, create a new inspection request for the inspector
   if (visitData.next_action && visitData.next_action.trim() !== '') {
-    // Parse location to extract city and area if possible
-    const locationParts = visitData.location.split(',').map(part => part.trim());
-    const city = visitData.region_province || locationParts[locationParts.length - 1] || 'غير محدد';
-    const area = locationParts.length > 1 ? locationParts[0] : 'غير محدد';
+    // Extract city and area from location (which comes from trader/plumber)
+    let city = visitData.region_province || 'غير محدد';
+    let area = 'غير محدد';
+
+    if (traderId) {
+      const trader = await Trader.findByPk(traderId);
+      if (trader) {
+        city = trader.city;
+        area = trader.area;
+      }
+    } else if (plumberId) {
+      const plumber = await Plumber.findByPk(plumberId);
+      if (plumber) {
+        city = plumber.city;
+        area = plumber.area;
+      }
+    } else {
+      // Fallback: parse from location if provided
+      const locationParts = customerLocation.split(',').map(part => part.trim());
+      city = visitData.region_province || locationParts[locationParts.length - 1] || 'غير محدد';
+      area = locationParts.length > 1 ? locationParts[0] : 'غير محدد';
+    }
 
     // Get user_id from plumber if plumberId exists
     let requestorUserId: number | null = null;
@@ -274,13 +348,13 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     const inspectionRequest = await InspectionRequest.create({
       requestor_id: requestorUserId,
       inspector_id: inspectorId,
-      user_name: customerName, // Use data from trader instead of body
-      user_phone: customerPhone, // Use data from trader instead of body
+      user_name: customerName, // Use data from trader/plumber instead of body
+      user_phone: customerPhone, // Use data from trader/plumber instead of body
       nationality_id: customerNationalityId,
       area: area,
       city: city,
-      address: visitData.location,
-      seller_name: visitData.company_name || customerName,
+      address: customerLocation, // Use location from trader/plumber instead of body
+      seller_name: companyName || customerName, // Use company name from trader/plumber
       seller_phone: customerPhone,
       certificate_id: '',
       inspection_date: new Date(),
@@ -359,6 +433,7 @@ export const getVisitStatus = async (inspectorId: number, traderId?: number, plu
         as: 'visitReport',
       },
     ],
+    order: [['createdAt', 'DESC']],
   });
 
   if (!visit) {
@@ -423,7 +498,7 @@ export const getEnvoyVisits = async (inspectorId: number) => {
       {
         model: VisitReport,
         as: 'visitReport',
-        attributes: ['visit_result', 'company_name'],
+        attributes: ['visit_result', 'company_name', 'sales_value'],
       },
     ],
     order: [['createdAt', 'DESC']],
@@ -439,28 +514,36 @@ export const getEnvoyVisits = async (inspectorId: number) => {
     plumber_area: visit.plumber?.area,
     company_name: visit.visitReport?.company_name || null,
     visit_result: visit.visitReport?.visit_result || null,
+    sales_value: visit.visitReport?.sales_value || 0,
     status: visit.status,
+    date: visit.createdAt,
   }));
 };
 
 /**
  * Get all visits for admin with pagination
  */
-export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
+export const getAdminVisits = async (page: number = 1, limit: number = 20, filters: any = {}) => {
   const offset = (page - 1) * limit;
 
+  const where: any = {};
+  if (filters.trader_id) where.trader_id = filters.trader_id;
+  if (filters.plumber_id) where.plumber_id = filters.plumber_id;
+  if (filters.inspector_id) where.inspector_id = filters.inspector_id;
+
   const { count, rows: visits } = await InspectionVisit.findAndCountAll({
+    where,
     include: [
       {
         model: Trader,
         as: 'trader',
-        attributes: ['id', 'city', 'area'],
+        attributes: ['id', 'city', 'area', 'latitude', 'longitude'],
         required: false,
       },
       {
         model: Plumber,
         as: 'plumber',
-        attributes: ['id', 'city', 'area'],
+        attributes: ['id', 'city', 'area', 'latitude', 'longitude'],
         required: false,
       },
       {
@@ -482,23 +565,49 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20) => {
   });
 
   return {
-    visits: visits.map(visit => ({
-      id: visit.id,
-      trader_id: visit.trader_id,
-      plumber_id: visit.plumber_id,
-      trader_city: visit.trader?.city,
-      trader_area: visit.trader?.area,
-      plumber_city: visit.plumber?.city,
-      plumber_area: visit.plumber?.area,
-      company_name: visit.visitReport?.company_name || null,
-      inspector_name: visit.inspector?.name,
-      inspector_phone: visit.inspector?.phone,
-      visit_result: visit.visitReport?.visit_result || null,
-      status: visit.status,
-      check_in_at: visit.check_in_at,
-      check_out_at: visit.check_out_at,
-      date: visit.createdAt,
-    })),
+    visits: visits.map(visit => {
+      // Calculate location status
+      let locationStatus: 'inside' | 'outside' | 'n/a' = 'n/a';
+
+      if (visit.check_in_latitude && visit.check_in_longitude) {
+        if (visit.trader && visit.trader.latitude && visit.trader.longitude) {
+          const distance = calculateDistance(
+            Number(visit.check_in_latitude),
+            Number(visit.check_in_longitude),
+            Number(visit.trader.latitude),
+            Number(visit.trader.longitude)
+          );
+          locationStatus = distance <= 100 ? 'inside' : 'outside';
+        } else if (visit.plumber && visit.plumber.latitude && visit.plumber.longitude) {
+          const distance = calculateDistance(
+            Number(visit.check_in_latitude),
+            Number(visit.check_in_longitude),
+            Number(visit.plumber.latitude),
+            Number(visit.plumber.longitude)
+          );
+          locationStatus = distance <= 100 ? 'inside' : 'outside';
+        }
+      }
+
+      return {
+        id: visit.id,
+        trader_id: visit.trader_id,
+        plumber_id: visit.plumber_id,
+        trader_city: visit.trader?.city || null,
+        trader_area: visit.trader?.area || null,
+        plumber_city: visit.plumber?.city || null,
+        plumber_area: visit.plumber?.area || null,
+        company_name: visit.visitReport?.company_name || null,
+        inspector_name: visit.inspector?.name,
+        inspector_phone: visit.inspector?.phone,
+        visit_result: visit.visitReport?.visit_result || null,
+        status: visit.status,
+        check_in_at: visit.check_in_at,
+        check_out_at: visit.check_out_at,
+        date: visit.createdAt,
+        location_status: locationStatus,
+      };
+    }),
     pagination: {
       total: count,
       page,
@@ -547,6 +656,35 @@ export const getAdminVisitDetails = async (visitId: number) => {
     visitData.visitReport.photos = viewImages(visitData.visitReport.photos);
   }
 
+  // Calculate location status
+  let locationStatus: 'inside' | 'outside' | 'n/a' = 'n/a';
+  let distanceMeters: number | null = null;
+
+  if (visit.check_in_latitude && visit.check_in_longitude) {
+    if (visit.trader && visit.trader.latitude && visit.trader.longitude) {
+      distanceMeters = calculateDistance(
+        Number(visit.check_in_latitude),
+        Number(visit.check_in_longitude),
+        Number(visit.trader.latitude),
+        Number(visit.trader.longitude)
+      );
+      locationStatus = distanceMeters <= 100 ? 'inside' : 'outside';
+    } else if (visit.plumber && visit.plumber.latitude && visit.plumber.longitude) {
+      distanceMeters = calculateDistance(
+        Number(visit.check_in_latitude),
+        Number(visit.check_in_longitude),
+        Number(visit.plumber.latitude),
+        Number(visit.plumber.longitude)
+      );
+      locationStatus = distanceMeters <= 100 ? 'inside' : 'outside';
+    }
+  }
+
+  visitData.location_status = locationStatus;
+  if (distanceMeters !== null) {
+    visitData.distance_meters = distanceMeters;
+  }
+
   return visitData;
 };
 
@@ -554,13 +692,25 @@ export const getAdminVisitDetails = async (visitId: number) => {
  * Update visit status (admin only)
  */
 export const updateVisitStatus = async (visitId: number, status: string) => {
-  const visit = await InspectionVisit.findByPk(visitId);
+  const visit = await InspectionVisit.findByPk(visitId, {
+    include: [
+      { model: Trader, as: 'trader', include: [{ model: User, as: 'user', attributes: ['name'] }] },
+      { model: Plumber, as: 'plumber', include: [{ model: User, as: 'user', attributes: ['name'] }] },
+    ],
+  });
 
   if (!visit) {
     throw new HttpError('Visit not found', 404);
   }
 
   await visit.update({ status });
+
+  // Trigger notification
+  const clientName = visit.trader?.user?.name || visit.plumber?.user?.name || 'Client';
+  const title = 'Visit Report Update';
+  const body = `Your visit report for ${clientName} has been ${status.toLowerCase()}.`;
+  sendPushNotification(visit.inspector_id, title, body);
+
   return visit;
 };
 
@@ -676,4 +826,74 @@ export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
     },
   };
 };
+
+/**
+ * Get visit timing statistics for an envoy on a specific day
+ */
+export const getEnvoyVisitTiming = async (inspectorId: number, date: Date) => {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const visits = await InspectionVisit.findAll({
+    where: {
+      inspector_id: inspectorId,
+      check_in_at: {
+        [Op.between]: [startOfDay, endOfDay],
+      },
+    },
+    include: [
+      {
+        model: Trader,
+        as: 'trader',
+        include: [{ model: User, as: 'user', attributes: ['name'] }],
+      },
+      {
+        model: Plumber,
+        as: 'plumber',
+        include: [{ model: User, as: 'user', attributes: ['name'] }],
+      },
+    ],
+    order: [['check_in_at', 'ASC']],
+  });
+
+  const visitTimings = visits.map((visit, index) => {
+    const checkIn = visit.check_in_at ? new Date(visit.check_in_at) : null;
+    const checkOut = visit.check_out_at ? new Date(visit.check_out_at) : null;
+
+    let duration = null;
+    if (checkIn && checkOut) {
+      duration = Math.round((checkOut.getTime() - checkIn.getTime()) / 1000 / 60); // Duration in minutes
+    }
+
+    let timeBetween = null;
+    if (index > 0) {
+      const prevVisit = visits[index - 1];
+      const prevCheckOut = prevVisit.check_out_at ? new Date(prevVisit.check_out_at) : null;
+      if (prevCheckOut && checkIn) {
+        timeBetween = Math.round((checkIn.getTime() - prevCheckOut.getTime()) / 1000 / 60); // Time between in minutes
+      }
+    }
+
+    const clientName = visit.trader?.user?.name || visit.plumber?.user?.name || 'Unknown';
+
+    return {
+      visit_id: visit.id,
+      client_name: clientName,
+      check_in_at: visit.check_in_at,
+      check_out_at: visit.check_out_at,
+      duration_minutes: duration,
+      time_since_previous_visit_minutes: timeBetween,
+    };
+  });
+
+  return {
+    date: startOfDay.toISOString().split('T')[0],
+    inspector_id: inspectorId,
+    visits: visitTimings,
+  };
+};
+
 

@@ -5,6 +5,8 @@ import User from '../user/user.model';
 import Role, { Roles } from '../role/role.model';
 import ModelHasRoles from '../role/model_has_roles.model';
 
+import { sendPushNotification } from '../../utils/notification';
+
 class AwardService {
     // Award CRUD
     async createAward(data: any) {
@@ -39,7 +41,14 @@ class AwardService {
         const award = await Award.findByPk(data.award_id);
         if (!award) throw new Error('Award not found');
 
-        return await EnvoyAward.create(data);
+        const envoyAward = await EnvoyAward.create(data);
+
+        // Trigger notification
+        const title = 'New Award Assigned';
+        const body = `Congratulations! You have been assigned a new award: ${award.title}`;
+        sendPushNotification(envoy.id, title, body);
+
+        return envoyAward;
     }
 
     async getEnvoyAwards(params: { page?: number; limit?: number; search?: string }) {

@@ -3,6 +3,8 @@ import path from 'path';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { AuthenticatedRequest } from '../../@types/express';
 import { getConfig } from 'dotenv-handler';
+import HttpError from '../../utils/HttpError';
+
 import {
   checkIn,
   checkOut,
@@ -13,6 +15,7 @@ import {
   getAdminVisitDetails,
   updateVisitStatus,
   getEnvoyWeeklyStatistics,
+  getEnvoyVisitTiming,
   ICheckInData,
   ICheckOutData,
   ISubmitVisitReportData,
@@ -118,7 +121,8 @@ export const getEnvoyVisitsHandler = asyncHandler(async (req: AuthenticatedReque
 export const getAdminVisitsHandler = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
-  const result = await getAdminVisits(page, limit);
+  const { trader_id, plumber_id, inspector_id } = req.query;
+  const result = await getAdminVisits(page, limit, { trader_id, plumber_id, inspector_id });
   res.status(200).json({
     message: 'Admin visits retrieved successfully',
     ...result,
@@ -152,4 +156,20 @@ export const getEnvoyWeeklyStatisticsHandler = asyncHandler(async (req: Authenti
     data: statistics,
   });
 }, 'Failed to get weekly statistics');
+
+export const getEnvoyVisitTimingHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { envoy_id, date } = req.body;
+
+  if (!envoy_id) {
+    throw new HttpError('envoy_id is required', 400);
+  }
+
+  const reportDate = date ? new Date(date) : new Date();
+  const statistics = await getEnvoyVisitTiming(Number(envoy_id), reportDate);
+
+  res.status(200).json({
+    message: 'Visit timing statistics retrieved successfully',
+    data: statistics,
+  });
+}, 'Failed to get visit timing statistics');
 

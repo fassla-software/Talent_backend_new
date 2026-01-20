@@ -11,6 +11,7 @@ import {
   bulkDeleteInspectionRequests,
   pendingInspectionRequest,
   getInspectorPendingRequests,
+  getInspectorOverdueRequests,
 } from './inspection_request.service';
 import { IFilter } from './dto/filer.dto';
 import { AuthenticatedRequest } from '../../@types/express';
@@ -83,3 +84,10 @@ export const getInspectorPendingRequestsHandler = asyncHandler(async (req: Authe
   const requests = await getInspectorPendingRequests(inspector_id, filter);
   res.status(200).json({ requests });
 }, 'Failed to get pending requests');
+
+export const getInspectorOverdueRequestsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspector_id = req.user!.id;
+  const filter = req.query;
+  const requests = await getInspectorOverdueRequests(inspector_id, filter);
+  res.status(200).json({ requests });
+}, 'Failed to get overdue requests');

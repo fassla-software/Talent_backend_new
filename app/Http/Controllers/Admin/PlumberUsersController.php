@@ -9,6 +9,9 @@ use App\Models\User;
 use App\Models\FiscalYear;
 use App\Models\PlumberFiscalPoints;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class PlumberUsersController extends Controller
 {
@@ -105,7 +108,88 @@ public function index(Request $request)
         }
     }
 
-    return view('admin.plumberUsers', compact('plumbers', 'allCities', 'availableMonths', 'allFiscalYears', 'activeYear'));
+    $envoys = User::role('envoy')->get(); // Fetch all envoys
+    return view('admin.plumberUsers', compact('plumbers', 'allCities', 'availableMonths', 'allFiscalYears', 'activeYear', 'envoys'));
+}
+
+public function create()
+{
+    $envoys = User::role('envoy')->get();
+    return view('admin.plumberUsers.create', compact('envoys'));
+}
+
+public function store(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'phone' => 'required|string|unique:users,phone',
+        'password' => 'required|string|min:6',
+        'city' => 'required|string',
+        'area' => 'required|string',
+        'nationality_id' => 'nullable|string',
+        'inspector_id' => 'nullable|exists:users,id',
+        'nationality_image1' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'nationality_image2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Create User
+        $user = User::create([
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'password' => Hash::make($request->password),
+            'is_active' => true,
+            'phone_verified_at' => now(),
+            'refer_code' => Str::upper(Str::random(5)),
+            'status' => 'PENDING',
+        ]);
+
+        $user->assignRole('plumber');
+
+        // Handle File Uploads
+        $nationalityImage1 = null;
+        $nationalityImage2 = null;
+
+        if ($request->hasFile('nationality_image1')) {
+            $file = $request->file('nationality_image1');
+            $filename = 'optimized-' . time() . '_1_' . $file->getClientOriginalName();
+            $file->move(base_path('plumber/uploads'), $filename);
+            $nationalityImage1 = $filename;
+        }
+
+        if ($request->hasFile('nationality_image2')) {
+            $file = $request->file('nationality_image2');
+            $filename = 'optimized-' . time() . '_2_' . $file->getClientOriginalName();
+            $file->move(base_path('plumber/uploads'), $filename);
+            $nationalityImage2 = $filename;
+        }
+
+        // Create Plumber
+        Plumber::create([
+            'user_id' => $user->id,
+            'city' => $request->city,
+            'area' => $request->area,
+            'nationality_id' => $request->nationality_id,
+            'nationality_image1' => $nationalityImage1,
+            'nationality_image2' => $nationalityImage2,
+            'inspector_id' => $request->inspector_id,
+            'status' => 'PENDING',
+            'is_verified' => true,
+        ]);
+
+        DB::commit();
+
+        // Send SMS
+        $message = "Welcome to Talanet! You have been registered successfully. Your credentials: Phone: {$request->phone}, Password: {$request->password}.";
+        $this->sendSMS($request->phone, $message);
+
+        return redirect()->route('admin.plumberUsers')->with('success', 'Plumber created successfully.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to create plumber: ' . $e->getMessage())->withInput();
+    }
 }
 
 
@@ -224,6 +308,7 @@ private function sendSMS($phone, $message)
             'gift_points' => 'nullable|integer',
             'fixed_points' => 'nullable|integer',
             'nationality_id' => 'nullable|string|max:50', // Added validation for nationality_id
+            'inspector_id' => 'nullable|exists:users,id',
         ]);
 
         $user = User::with('plumber')->find($id); // Eager load plumber
@@ -244,6 +329,7 @@ private function sendSMS($phone, $message)
                 'fixed_points' => $data['fixed_points'] ?? $user->plumber->fixed_points,
                 'instant_withdrawal' => $data['instant_withdrawal'] ?? $user->plumber->instant_withdrawal,
                 'nationality_id' => $data['nationality_id'] ?? $user->plumber->nationality_id,
+                'inspector_id' => $data['inspector_id'] ?? $user->plumber->inspector_id,
             ]);
         }
 

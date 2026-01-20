@@ -72,6 +72,10 @@
                 <input type="number" name="salary" class="form-control" value="{{ old('salary', $user->envoySetting?->salary) }}">
             </div>
             <div class="col-md-3">
+                <label class="form-label mb-1">{{ __('Incentives') }}</label>
+                <input type="number" name="incentives" class="form-control" value="{{ old('incentives', $user->envoySetting?->incentives) }}">
+            </div>
+            <div class="col-md-3">
                 <label class="form-label mb-1">{{ __('Region') }}</label>
                 <input type="text" name="region" class="form-control" value="{{ old('region', $user->envoySetting?->region) }}">
             </div>

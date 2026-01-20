@@ -11,6 +11,7 @@ import {
   getAdminVisitDetailsHandler,
   updateVisitStatusHandler,
   getEnvoyWeeklyStatisticsHandler,
+  getEnvoyVisitTimingHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -115,5 +116,10 @@ router.put(
   updateVisitStatusHandler,
 );
 
+// Envoy Visit Timing (Open route for admin use)
+router.post(
+  '/timing',
+  getEnvoyVisitTimingHandler,
+);
 export default router;
 
