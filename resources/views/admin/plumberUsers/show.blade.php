@@ -109,6 +109,18 @@
                                 <p class="form-control-plaintext">{{ \Carbon\Carbon::parse($plumber->updated_at)->format('Y-m-d H:i:s') }}</p>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3 p-2 border rounded bg-light">
+                                <label class="font-weight-bolder">Added By (Envoy)</label>
+                                <p class="form-control-plaintext">{{ $plumber->inspector->name ?? 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3 p-2 border rounded bg-light">
+                                <label class="font-weight-bolder">Envoy Phone</label>
+                                <p class="form-control-plaintext">{{ $plumber->inspector->phone ?? 'N/A' }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

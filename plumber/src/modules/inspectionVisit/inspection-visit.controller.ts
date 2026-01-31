@@ -16,6 +16,8 @@ import {
   updateVisitStatus,
   getEnvoyWeeklyStatistics,
   getEnvoyVisitTiming,
+  getClientNextActions,
+  getEnvoyTasks,
   ICheckInData,
   ICheckOutData,
   ISubmitVisitReportData,
@@ -121,8 +123,8 @@ export const getEnvoyVisitsHandler = asyncHandler(async (req: AuthenticatedReque
 export const getAdminVisitsHandler = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
-  const { trader_id, plumber_id, inspector_id } = req.query;
-  const result = await getAdminVisits(page, limit, { trader_id, plumber_id, inspector_id });
+  const { trader_id, plumber_id, inspector_id, status } = req.query;
+  const result = await getAdminVisits(page, limit, { trader_id, plumber_id, inspector_id, status });
   res.status(200).json({
     message: 'Admin visits retrieved successfully',
     ...result,
@@ -172,4 +174,30 @@ export const getEnvoyVisitTimingHandler = asyncHandler(async (req: Request, res:
     data: statistics,
   });
 }, 'Failed to get visit timing statistics');
+
+export const getClientNextActionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const { trader_id, plumber_id } = req.query;
+
+  const visits = await getClientNextActions(
+    inspectorId,
+    trader_id ? parseInt(trader_id as string) : undefined,
+    plumber_id ? parseInt(plumber_id as string) : undefined,
+  );
+
+  res.status(200).json({
+    message: 'Client next actions retrieved successfully',
+    data: visits,
+  });
+}, 'Failed to get client next actions');
+
+export const getEnvoyTasksHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const tasks = await getEnvoyTasks(inspectorId);
+  res.status(200).json({
+    message: 'Envoy tasks retrieved successfully',
+    data: tasks,
+  });
+}, 'Failed to get envoy tasks');
+
 

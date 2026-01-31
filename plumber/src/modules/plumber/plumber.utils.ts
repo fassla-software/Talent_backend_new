@@ -83,7 +83,7 @@ export const getPlumberDetails = async (id: string): Promise<Plumber | null> => 
         attributes: [
           'name',
           'phone',
-         'refer_code',
+          'refer_code',
           [
             Sequelize.literal(
               `(SELECT COUNT(*) FROM \`inspection_requests\` 

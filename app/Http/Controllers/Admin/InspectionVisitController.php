@@ -31,6 +31,10 @@ class InspectionVisitController extends Controller
                 $params['plumber_id'] = $request->get('plumber_id');
             }
 
+            if ($request->has('status')) {
+                $params['status'] = $request->get('status');
+            }
+
             $response = Http::get($this->apiBaseUrl . '/admin', $params);
 
             if ($response->successful()) {

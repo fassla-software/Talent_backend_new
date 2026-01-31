@@ -31,7 +31,7 @@
                         <p><strong>{{ __('Salary') }}:</strong> {{ number_format($user->envoySetting->salary ?? 0, 2) }}</p>
                         <p><strong>{{ __('Incentives') }}:</strong> {{ number_format($user->envoySetting->incentives ?? 0, 2) }}</p>
                         <p><strong>{{ __('Target') }}:</strong> {{ number_format($user->envoySetting->target ?? 0, 2) }}</p>
-                        <p><strong>{{ __('Weight') }}:</strong> {{ $user->envoySetting->weight ?? 0 }}</p>
+{{-- <p><strong>{{ __('Weight') }}:</strong> {{ $user->envoySetting->weight ?? 0 }}</p> --}}
                     </div>
                 </div>
             </div>

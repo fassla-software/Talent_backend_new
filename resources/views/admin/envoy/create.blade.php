@@ -55,11 +55,13 @@
                         @error('region') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
+{{-- 
                     <div class="col-md-6 mb-3">
                         <label for="weight" class="form-label">{{ __('Weight') }}</label>
                         <input type="number" step="0.01" name="weight" id="weight" class="form-control @error('weight') is-invalid @enderror" value="{{ old('weight', 0) }}">
                         @error('weight') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
+--}}
 
                     <div class="col-md-6 mb-3">
                         <label for="target" class="form-label">{{ __('Target') }}</label>

@@ -78,6 +78,14 @@
                     <h6 class="text-muted">Created At</h6>
                     <p class="fw-bold text-success">{{ $trader->created_at?->format('Y-m-d H:i') }}</p>
                 </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="text-muted">Added By (Envoy)</h6>
+                    <p class="fw-bold">{{ $trader->inspector->name ?? 'N/A' }}</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="text-muted">Envoy Phone</h6>
+                    <p class="fw-bold">{{ $trader->inspector->phone ?? 'N/A' }}</p>
+                </div>
                
             </div>
         </div>

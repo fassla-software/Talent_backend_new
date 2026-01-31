@@ -39,7 +39,7 @@ public function index(Request $request)
     $activeYear = FiscalYear::where('is_active', true)->first();
 
     // Retrieve plumbers and apply filters
-    $plumbers = Plumber::with('user')
+    $plumbers = Plumber::with(['user', 'inspector'])
     ->select([
         'id',
         'user_id',
@@ -57,7 +57,8 @@ public function index(Request $request)
         'created_at',
         'updated_at',
         'image',
-        'withdraw_money'
+        'withdraw_money',
+        'inspector_id'
     ])
         ->when($statusFilter, function ($query) use ($statusFilter) {
             return $query->whereHas('user', function ($query) use ($statusFilter) {
@@ -292,7 +293,7 @@ private function sendSMS($phone, $message)
 
      public function show($id)
     {
-        $plumber = Plumber::with('user')->findOrFail($id);
+        $plumber = Plumber::with(['user', 'inspector'])->findOrFail($id);
         
         $activeYear = FiscalYear::where('is_active', true)->first();
         

@@ -34,7 +34,7 @@ class TraderUsersController extends Controller
             ->pluck('month');
 
         // Retrieve traders and apply filters
-        $traders = Trader::with('user')
+        $traders = Trader::with(['user', 'inspector'])
             ->select([
                 'id',
                 'user_id',
@@ -51,7 +51,8 @@ class TraderUsersController extends Controller
                 'created_at',
                 'updated_at',
                 'image',
-                'withdraw_money'
+                'withdraw_money',
+                'inspector_id'
             ])
             ->when($statusFilter, function ($query) use ($statusFilter) {
                 return $query->whereHas('user', function ($query) use ($statusFilter) {
@@ -325,7 +326,7 @@ class TraderUsersController extends Controller
 
     public function show($id)
     {
-        $trader = Trader::with('user')->findOrFail($id);
+        $trader = Trader::with(['user', 'inspector'])->findOrFail($id);
 
         $totalCoupons = $trader->usedCoupons()->where('status', 'used')->count();
 

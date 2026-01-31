@@ -29,9 +29,9 @@ class Plumber extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-public function plumber()
-{
-    return $this->belongsTo(Plumber::class, 'plumber_id');
-}
+    public function inspector()
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
 
 }

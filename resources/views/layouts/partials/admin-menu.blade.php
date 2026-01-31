@@ -472,11 +472,21 @@
 </li>
 
 <li>
-    <a class="menu {{ $request->routeIs('admin.inspectionVisit.*') ? 'active' : '' }}"
+    <a class="menu {{ $request->routeIs('admin.inspectionVisit.*') && !request('status') ? 'active' : '' }}"
         href="{{ route('admin.inspectionVisit.index') }}">
         <span>
             <i class="fa-solid fa-clipboard-check menu-icon"></i>
             {{ __('Sales and Marketing Visits') }}
+        </span>
+    </a>
+</li>
+
+<li>
+    <a class="menu {{ request('status') === 'SCHEDULED' ? 'active' : '' }}"
+        href="{{ route('admin.inspectionVisit.index', ['status' => 'SCHEDULED']) }}">
+        <span>
+            <i class="fa-solid fa-calendar-days menu-icon"></i>
+            {{ __('Scheduled Visits') }}
         </span>
     </a>
 </li>

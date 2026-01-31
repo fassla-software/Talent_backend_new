@@ -4,7 +4,9 @@ import sequelize from '../../config/db';
 class Media extends Model {
   public id!: number;
   public name!: string;
-  public path!: string;
+  public src!: string;
+  public type!: string;
+  public extention!: string;
   public createdAt!: Date;
   public updatedAt!: Date;
 }
@@ -20,15 +22,25 @@ Media.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    path: {
+    src: {
       type: DataTypes.STRING,
       allowNull: false,
+    },
+    type: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'image',
+    },
+    extention: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {
     sequelize,
     tableName: 'media',
     timestamps: true,
+    underscored: true,
   },
 );
 

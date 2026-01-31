@@ -90,10 +90,12 @@
                             <span class="fw-bold text-dark">{{ $plumber->nationality_id ?? '---' }}</span>
                         </div>
                         <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
-                            <span class="text-muted"><i class="fa fa-check-circle me-2"></i> Verified</span>
-                            <span class="fw-bold {{ $plumber->is_verified ? 'text-success' : 'text-danger' }}">
-                                {{ $plumber->is_verified ? 'Verified' : 'Unverified' }}
-                            </span>
+                            <span class="text-muted"><i class="fa fa-user-tie me-2"></i> Added By (Envoy)</span>
+                            <span class="fw-bold text-dark">{{ $plumber->inspector->name ?? '---' }}</span>
+                        </div>
+                        <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                            <span class="text-muted"><i class="fa fa-phone-alt me-2"></i> Envoy Phone</span>
+                            <span class="fw-bold text-dark">{{ $plumber->inspector->phone ?? '---' }}</span>
                         </div>
                     </div>
                 </div>

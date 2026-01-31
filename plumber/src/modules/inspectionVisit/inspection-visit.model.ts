@@ -9,6 +9,7 @@ export enum VisitStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
+  SCHEDULED = 'SCHEDULED',
 }
 
 class InspectionVisit extends Model {
@@ -24,6 +25,9 @@ class InspectionVisit extends Model {
   public check_out_at?: Date | null;
   public check_out_latitude?: number | null;
   public check_out_longitude?: number | null;
+  public scheduled_at?: Date | null;
+  public visit_type!: 'REGULAR' | 'FOLLOW_UP';
+  public notes?: string | null;
   public createdAt!: Date;
   public updatedAt!: Date;
 
@@ -63,7 +67,7 @@ InspectionVisit.init(
       },
     },
     trader_id: {
-      type: DataTypes.BIGINT.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
       references: {
         model: 'traders',
@@ -73,7 +77,7 @@ InspectionVisit.init(
       onUpdate: 'CASCADE',
     },
     plumber_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
       references: {
         model: 'plumbers',
@@ -91,7 +95,7 @@ InspectionVisit.init(
       },
     },
     status: {
-      type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED'),
+      type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED', 'SCHEDULED'),
       allowNull: false,
       defaultValue: VisitStatus.PENDING,
     },
@@ -117,6 +121,19 @@ InspectionVisit.init(
     },
     check_out_longitude: {
       type: DataTypes.DECIMAL(11, 8),
+      allowNull: true,
+    },
+    scheduled_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    visit_type: {
+      type: DataTypes.ENUM('REGULAR', 'FOLLOW_UP'),
+      allowNull: false,
+      defaultValue: 'REGULAR',
+    },
+    notes: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },

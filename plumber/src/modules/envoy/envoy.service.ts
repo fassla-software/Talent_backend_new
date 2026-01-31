@@ -8,7 +8,7 @@ import HttpError from '../../utils/HttpError';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Roles } from '../role/role.model';
-import { assignRole } from '../role/role.service';
+import { assignRole, getRole } from '../role/role.service';
 import { generateUniqueReferralCode } from '../../utils/generateReferCode';
 import { PlumberAccountStatus } from '../plumber/plumber.model';
 import { TraderActivityStatus } from '../trader/trader.model';
@@ -19,6 +19,11 @@ import SMSSender from '../../utils/smsSender';
 import { logStatusChange } from '../statusHistory/status-history.service';
 import { ClientType } from '../statusHistory/status-history.model';
 import NotificationUnique from '../user/notification.model';
+import InspectionVisit from '../inspectionVisit/inspection-visit.model';
+import VisitReport from '../inspectionVisit/visit-report.model';
+import InspectionRequest from '../inspectionRequest/inspection_request.model';
+import Media from '../media/media.model';
+import sequelize from '../../config/db';
 
 export const getEnvoySettingByUserId = async (userId: number) => {
     return await EnvoySetting.findOne({ where: { user_id: userId } });
@@ -191,52 +196,169 @@ export const getEnvoyClients = async (envoyId: number, name?: string, phone?: st
     if (name) userWhere.name = { [Op.like]: `%${name}%` };
     if (phone) userWhere.phone = { [Op.like]: `%${phone}%` };
 
+    const hasSearch = Object.keys(userWhere).length > 0;
+
+    // Common include for both Traders and Plumbers
+    const getInclude = () => [
+        {
+            model: User,
+            as: 'user',
+            where: hasSearch ? userWhere : undefined,
+            include: [
+                {
+                    model: Ticket,
+                    as: 'client_tickets',
+                },
+                {
+                    model: EnvoyNote,
+                    as: 'clientNotes',
+                },
+                {
+                    model: InspectionRequest,
+                    as: 'requests',
+                },
+            ],
+        },
+        {
+            model: User,
+            as: 'inspector',
+            attributes: ['id', 'name'],
+        },
+        {
+            model: InspectionVisit,
+            as: 'inspectionVisits',
+            include: [
+                {
+                    model: VisitReport,
+                    as: 'visitReport',
+                }
+            ],
+            where: { inspector_id: envoyId },
+            required: !hasSearch, // If no search, only return clients with visits by this envoy
+        },
+    ];
+
     const traders = await Trader.findAll({
-        where: { inspector_id: envoyId },
-        include: [
-            {
-                model: User,
-                as: 'user',
-                where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
-                include: [
-                    {
-                        model: Ticket,
-                        as: 'client_tickets',
-                    },
-                    {
-                        model: EnvoyNote,
-                        as: 'clientNotes',
-                    },
-                ],
-            },
-        ],
+        include: getInclude(),
     });
 
     const plumbers = await Plumber.findAll({
-        where: { inspector_id: envoyId },
-        include: [
-            {
-                model: User,
-                as: 'user',
-                where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
-                include: [
-                    {
-                        model: Ticket,
-                        as: 'client_tickets',
-                    },
-                    {
-                        model: EnvoyNote,
-                        as: 'clientNotes',
-                    },
-                ],
-            },
-        ],
+        include: getInclude(),
     });
 
+    const processClient = (client: any, role: string) => {
+        const json = client.toJSON();
+        const clientVisits = json.inspectionVisits || [];
+        const clientTasks = json.user?.requests || [];
+
+        const result = {
+            ...json,
+            role,
+            inspector_name: json.inspector?.name || null,
+            total_count: clientVisits.length,
+            last_visit_date: clientVisits.length > 0
+                ? new Date(Math.max(...clientVisits.map((v: any) => new Date(v.check_in_at || v.createdAt).getTime())))
+                : null,
+            total_sales_values: clientVisits.reduce((sum: number, visit: any) =>
+                sum + Number(visit.visitReport?.sales_value || 0), 0),
+        };
+
+        if (result.user) {
+            result.user.client_visits = clientVisits;
+            result.user.client_tasks = clientTasks;
+            result.user.client_notes = result.user.clientNotes || [];
+            delete (result.user as any).clientNotes;
+            delete (result.user as any).requests;
+        }
+
+        // Remove redundant inspectionVisits
+        delete (result as any).inspectionVisits;
+
+        return result;
+    };
+
     const clients = [
-        ...traders.map(t => ({ ...t.toJSON(), role: 'trader' })),
-        ...plumbers.map(p => ({ ...p.toJSON(), role: 'plumber' })),
+        ...traders.map(t => processClient(t, 'trader')),
+        ...plumbers.map(p => processClient(p, 'plumber')),
     ];
 
     return clients;
+};
+
+export const updateProfile = async (
+    userId: number,
+    data: { name?: string; phone?: string; region?: string; profile_photo?: string }
+) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const user = await User.findByPk(userId, { transaction });
+        if (!user) throw new HttpError('User not found', 404);
+
+        const envoySetting = await EnvoySetting.findOne({ where: { user_id: userId }, transaction });
+        if (!envoySetting) throw new HttpError('Envoy settings not found', 404);
+
+        // Update User
+        if (data.name) user.name = data.name;
+        if (data.phone) {
+            const existingUser = await User.findOne({
+                where: { phone: data.phone, id: { [Op.ne]: userId } },
+                transaction
+            });
+            if (existingUser) throw new HttpError('Phone number already in use', 400);
+            user.phone = data.phone;
+        }
+
+        // Update Profile Photo
+        if (data.profile_photo) {
+            const extension = data.profile_photo.split('.').pop();
+            let media = await Media.findByPk(user.mediaId || 0, { transaction });
+            if (media) {
+                media.name = data.profile_photo;
+                media.src = data.profile_photo;
+                media.extention = extension || 'jpg';
+                await media.save({ transaction });
+            } else {
+                media = await Media.create({
+                    name: data.profile_photo,
+                    src: data.profile_photo,
+                    type: 'image',
+                    extention: extension || 'jpg',
+                }, { transaction });
+                user.mediaId = media.id;
+            }
+        }
+
+        await user.save({ transaction });
+
+        // Update Envoy Setting
+        if (data.region !== undefined) {
+            envoySetting.region = data.region;
+            await envoySetting.save({ transaction });
+        }
+
+        const updatedUser = await User.findByPk(userId, {
+            include: [
+                { model: Media, as: 'media', attributes: ['src', 'extention'] },
+                { model: EnvoySetting, as: 'envoySetting' }
+            ],
+            transaction // Include this in the same transaction
+        });
+
+        if (!updatedUser) throw new HttpError('User not found after update', 404);
+
+        const role = await getRole(userId);
+
+        await transaction.commit();
+
+        return {
+            user: {
+                ...updatedUser.toJSON(),
+                role,
+                envoySetting: updatedUser.envoySetting
+            },
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 };

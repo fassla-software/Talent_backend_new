@@ -17,10 +17,10 @@ export const registerUserByEnvoyHandler = asyncHandler(async (req: any, res: Res
     // Handle uploaded files (nationality images)
     const files = req.files as Express.Multer.File[];
     if (files && files.length > 0) {
+        // Map uploaded files to nationality_image1 and nationality_image2
         if (files[0]) userData.nationality_image1 = files[0].filename;
         if (files[1]) userData.nationality_image2 = files[1].filename;
     }
-
 
     // Convert role string to Roles enum
     const userRole = role === 'plumber' ? Roles.PLUMBER : Roles.TRADER;
@@ -86,6 +86,7 @@ export const getAdminEnvoyStatisticsHandler = asyncHandler(
     },
     'Failed to get admin statistics'
 );
+
 export const getNotificationsHandler = asyncHandler(async (req: any, res: Response) => {
     const userId = req.user.id;
     const notifications = await envoyService.getNotifications(Number(userId));
@@ -117,3 +118,21 @@ export const getEnvoyClientsHandler = asyncHandler(async (req: any, res: Respons
         data: clients,
     });
 }, 'Failed to get envoy clients');
+
+export const updateProfileHandler = asyncHandler(async (req: any, res: Response) => {
+    const userId = req.user.id;
+    const { name, phone, region } = req.body;
+
+    const updateData: any = { name, phone, region };
+
+    if (req.file) {
+        updateData.profile_photo = req.file.filename;
+    }
+
+    const result = await envoyService.updateProfile(Number(userId), updateData);
+
+    res.status(200).json({
+        message: 'Profile updated successfully',
+        ...result,
+    });
+}, 'Failed to update profile');

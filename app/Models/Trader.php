@@ -52,6 +52,11 @@ class Trader extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function inspector()
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
     /**
      * Relationship to coupons used by this trader.
      */

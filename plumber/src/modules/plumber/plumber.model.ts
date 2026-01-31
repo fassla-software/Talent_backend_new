@@ -203,6 +203,7 @@ Plumber.init(
 
 // Establish a relationship with the User model
 Plumber.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Plumber.belongsTo(User, { foreignKey: 'inspector_id', as: 'inspector' });
 User.hasMany(Plumber, { foreignKey: 'user_id', as: 'plumbers' });
 
 export default Plumber;

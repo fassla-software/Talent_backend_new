@@ -203,8 +203,8 @@ export const getSalesStats = async (
     inspectorId: number,
     period: TimePeriod
 ) => {
-    // Get all visit reports for this inspector's clients in the period
-    const traderSales = await VisitReport.findAll({
+    // Get all visit reports for this inspector in the period
+    const allSales = await VisitReport.findAll({
         where: {
             createdAt: {
                 [Op.between]: [period.start_date, period.end_date],
@@ -215,34 +215,13 @@ export const getSalesStats = async (
         },
         include: [
             {
-                model: Trader,
-                as: 'trader',
+                model: InspectionVisit,
+                as: 'inspectionVisit',
                 where: { inspector_id: inspectorId },
                 required: true,
             },
         ],
     });
-
-    const plumberSales = await VisitReport.findAll({
-        where: {
-            createdAt: {
-                [Op.between]: [period.start_date, period.end_date],
-            },
-            sales_value: {
-                [Op.gt]: 0,
-            },
-        },
-        include: [
-            {
-                model: Plumber,
-                as: 'plumber',
-                where: { inspector_id: inspectorId },
-                required: true,
-            },
-        ],
-    });
-
-    const allSales = [...traderSales, ...plumberSales];
 
     // Calculate totals
     let totalAmount = 0;

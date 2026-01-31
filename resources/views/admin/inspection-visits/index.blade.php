@@ -7,6 +7,18 @@
     <div class="container-fluid mt-3">
         <div class="mb-3 card">
             <div class="card-body">
+                <form action="{{ route('admin.inspectionVisit.index') }}" method="GET" class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label">{{ __('Status') }}</label>
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">{{ __('All Statuses') }}</option>
+                            <option value="PENDING" {{ request('status') === 'PENDING' ? 'selected' : '' }}>{{ __('PENDING') }}</option>
+                            <option value="APPROVED" {{ request('status') === 'APPROVED' ? 'selected' : '' }}>{{ __('APPROVED') }}</option>
+                            <option value="REJECTED" {{ request('status') === 'REJECTED' ? 'selected' : '' }}>{{ __('REJECTED') }}</option>
+                            <option value="SCHEDULED" {{ request('status') === 'SCHEDULED' ? 'selected' : '' }}>{{ __('SCHEDULED') }}</option>
+                        </select>
+                    </div>
+                </form>
                 <div class="cardTitleBox">
                     <h5 class="card-title chartTitle">{{ __('All Visits') }}</h5>
                 </div>
@@ -33,7 +45,7 @@
                                     <td>{{ $visit['inspector_name'] ?? '-' }}</td>
                                     <td>{{ $visit['date'] ? \Carbon\Carbon::parse($visit['date'])->format('Y-m-d H:i') : '-' }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $visit['status'] === 'APPROVED' ? 'success' : ($visit['status'] === 'REJECTED' ? 'danger' : 'warning') }}">
+                                        <span class="badge bg-{{ $visit['status'] === 'APPROVED' ? 'success' : ($visit['status'] === 'REJECTED' ? 'danger' : ($visit['status'] === 'SCHEDULED' ? 'info' : 'warning')) }}">
                                             {{ $visit['status'] }}
                                         </span>
                                     </td>
@@ -91,19 +103,19 @@
                     <ul class="pagination">
                         @if($pagination['page'] > 1)
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ $pagination['page'] - 1 }}">Previous</a>
+                                <a class="page-link" href="?page={{ $pagination['page'] - 1 }}{{ request('status') ? '&status='.request('status') : '' }}">Previous</a>
                             </li>
                         @endif
                         
                         @for($i = 1; $i <= $pagination['totalPages']; $i++)
                             <li class="page-item {{ $i == $pagination['page'] ? 'active' : '' }}">
-                                <a class="page-link" href="?page={{ $i }}">{{ $i }}</a>
+                                <a class="page-link" href="?page={{ $i }}{{ request('status') ? '&status='.request('status') : '' }}">{{ $i }}</a>
                             </li>
                         @endfor
                         
                         @if($pagination['page'] < $pagination['totalPages'])
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ $pagination['page'] + 1 }}">Next</a>
+                                <a class="page-link" href="?page={{ $pagination['page'] + 1 }}{{ request('status') ? '&status='.request('status') : '' }}">Next</a>
                             </li>
                         @endif
                     </ul>

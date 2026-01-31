@@ -12,6 +12,8 @@ import {
   updateVisitStatusHandler,
   getEnvoyWeeklyStatisticsHandler,
   getEnvoyVisitTimingHandler,
+  getClientNextActionsHandler,
+  getEnvoyTasksHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -20,6 +22,7 @@ import {
   checkOutValidation,
   submitVisitReportValidation,
   getVisitStatusValidation,
+  getClientNextActionsValidation
 } from './inspection-visit.validation';
 import { Roles } from '../role/role.model';
 
@@ -100,6 +103,20 @@ router.get(
   getEnvoyWeeklyStatisticsHandler,
 );
 
+router.get(
+  '/envoy/client-next-actions',
+  authenticate,
+  authorize(Roles.Envoy),
+  getClientNextActionsValidation,
+  getClientNextActionsHandler,
+);
+
+router.get(
+  '/envoy/tasks',
+  authenticate,
+  authorize(Roles.Envoy),
+  getEnvoyTasksHandler,
+);
 // Admin routes
 router.get(
   '/admin',

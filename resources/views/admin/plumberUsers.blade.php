@@ -105,6 +105,7 @@
                     <th>User Name</th>
                     <th>City</th>
                     <th>User Status</th>
+                    <th>Added By (Envoy)</th>
                     <th>Actions</th> <!-- Actions column -->
                 </tr>
             </thead>
@@ -131,6 +132,7 @@
         {{ $plumber->user->status ?? 'No Status' }}
     </span>
 </td>
+<td>{{ $plumber->inspector->name ?? 'N/A' }} ({{ $plumber->inspector->phone ?? 'N/A' }})</td>
                         
 <td>
                             <!-- View Button (to open new page) -->

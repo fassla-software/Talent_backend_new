@@ -1,4 +1,4 @@
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import { strict, handleValidationErrors } from '../../utils/base.validators';
 
 export const checkInValidation = [
@@ -20,6 +20,10 @@ export const checkInValidation = [
     .optional()
     .isInt()
     .withMessage('plumber_id must be a number'),
+  body('visit_id')
+    .optional()
+    .isInt()
+    .withMessage('visit_id must be a number'),
   body()
     .custom((value, { req }) => {
       if (!req.body.trader_id && !req.body.plumber_id) {
@@ -187,6 +191,26 @@ export const getVisitStatusValidation = [
     .withMessage('trader_id must be a number')
     .notEmpty()
     .withMessage('trader_id is required'),
+  handleValidationErrors,
+  strict,
+];
+
+export const getClientNextActionsValidation = [
+  query('trader_id')
+    .optional()
+    .isInt()
+    .withMessage('trader_id must be a number'),
+  query('plumber_id')
+    .optional()
+    .isInt()
+    .withMessage('plumber_id must be a number'),
+  query()
+    .custom((value, { req }) => {
+      if (req.query?.trader_id && req.query?.plumber_id) {
+        throw new Error('Cannot provide both trader_id and plumber_id');
+      }
+      return true;
+    }),
   handleValidationErrors,
   strict,
 ];

@@ -38,7 +38,7 @@ export const initTraderStatusCron = () => {
                             required: true,
                         },
                     ],
-                    order: [['InspectionVisit', 'createdAt', 'DESC']],
+                    order: [['createdAt', 'DESC']],
                 });
 
                 let lastActivityDate = trader.createdAt; // Default to creation date if no visits
@@ -104,7 +104,7 @@ export const initTraderStatusCron = () => {
                             required: true,
                         },
                     ],
-                    order: [['InspectionVisit', 'createdAt', 'DESC']],
+                    order: [['createdAt', 'DESC']],
                 });
 
                 let lastActivityDate = plumber.createdAt;

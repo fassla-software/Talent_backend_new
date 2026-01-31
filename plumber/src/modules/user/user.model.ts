@@ -138,4 +138,6 @@ User.init(
   },
 );
 
+User.belongsTo(Media, { foreignKey: 'mediaId', as: 'media' });
+
 export default User;

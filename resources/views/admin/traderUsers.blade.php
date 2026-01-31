@@ -71,6 +71,7 @@
                                     <th>Name</th>
                                     <th>Phone</th>
                                     <th>City</th>
+                                    <th>Added By (Envoy)</th>
                                     <th>Created At</th>
                                     <th>Actions</th>
                                 </tr>
@@ -82,6 +83,7 @@
                                         <td>{{ $trader->user->name ?? 'No User' }}</td>
                                         <td>{{ $trader->user->phone ?? 'N/A' }}</td>
                                         <td>{{ $trader->city ?? 'N/A' }}</td>
+                                        <td>{{ $trader->inspector->name ?? 'N/A' }} ({{ $trader->inspector->phone ?? 'N/A' }})</td>
                                         <td>{{ $trader->created_at->format('Y-m-d H:i') }}</td>
                                         <td>
                                             <a href="{{ route('admin.traders.show', $trader->id) }}" class="btn btn-sm btn-info">

@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import HttpError from '../../utils/HttpError';
-import InspectionVisit from './inspection-visit.model';
+import InspectionVisit, { VisitStatus } from './inspection-visit.model';
 import VisitReport from './visit-report.model';
 import User from '../user/user.model';
 import Trader, { TraderActivityStatus } from '../trader/trader.model';
@@ -17,6 +17,7 @@ export interface ICheckInData {
   longitude: number;
   trader_id?: number;
   plumber_id?: number;
+  visit_id?: number;
 }
 
 export interface ICheckOutData {
@@ -45,6 +46,7 @@ export interface ISubmitVisitReportData {
   planned_purchase_date?: string;
   outcome_classification?: string;
   next_action?: string;
+  follow_up_date?: string;
   // Sales Classification
   sales_classification?: string;
   // Additional
@@ -52,10 +54,10 @@ export interface ISubmitVisitReportData {
   images?: string[];
 }
 
+
 /**
  * Calculate distance between two coordinates using simplified formula
  * @returns distance in meters
- * Note: This is an approximation that works well for short distances (< 100km)
  */
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   // Average Earth radius in meters
@@ -86,7 +88,30 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
  * Check-in for an inspection visit
  */
 export const checkIn = async (inspectorId: number, data: ICheckInData) => {
-  const { latitude, longitude, trader_id, plumber_id } = data;
+  const { latitude, longitude, trader_id, plumber_id, visit_id } = data;
+
+  // If visit_id is provided, it's a check-in for a scheduled visit
+  if (visit_id) {
+    const scheduledVisit = await InspectionVisit.findByPk(visit_id);
+    if (!scheduledVisit) {
+      throw new HttpError('Scheduled visit not found', 404);
+    }
+    if (scheduledVisit.inspector_id !== inspectorId) {
+      throw new HttpError('This scheduled visit does not belong to you', 403);
+    }
+    if (scheduledVisit.isCheckedIn()) {
+      throw new HttpError('Already checked in for this visit', 422);
+    }
+
+    await scheduledVisit.update({
+      check_in_at: new Date(),
+      check_in_latitude: latitude,
+      check_in_longitude: longitude,
+      status: VisitStatus.PENDING, // Move from SCHEDULED to PENDING (active)
+    });
+
+    return scheduledVisit;
+  }
 
   // Check if there is an active visit (checked in but not checked out)
   const activeVisit = await InspectionVisit.findOne({
@@ -95,6 +120,7 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
       ...(plumber_id ? { plumber_id } : {}),
       inspector_id: inspectorId,
       check_out_at: null,
+      status: { [Op.ne]: VisitStatus.SCHEDULED },
     },
   });
 
@@ -110,6 +136,7 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
     check_in_at: new Date(),
     check_in_latitude: latitude,
     check_in_longitude: longitude,
+    status: VisitStatus.PENDING,
   });
 
   // Set trader/plumber location on first visit (if not already set)
@@ -310,64 +337,19 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     report_id: report.id,
   });
 
-  // If next_action is provided, create a new inspection request for the inspector
-  if (visitData.next_action && visitData.next_action.trim() !== '') {
-    // Extract city and area from location (which comes from trader/plumber)
-    let city = visitData.region_province || 'غير محدد';
-    let area = 'غير محدد';
+  // If next_action is provided, create a new SCHEDULED inspection visit for the inspector
+  if (visitData.next_action === 'field_visit' && visitData.next_action.trim() !== '') {
+    const followUpDate = visitData.follow_up_date ? new Date(visitData.follow_up_date) : new Date();
 
-    if (traderId) {
-      const trader = await Trader.findByPk(traderId);
-      if (trader) {
-        city = trader.city;
-        area = trader.area;
-      }
-    } else if (plumberId) {
-      const plumber = await Plumber.findByPk(plumberId);
-      if (plumber) {
-        city = plumber.city;
-        area = plumber.area;
-      }
-    } else {
-      // Fallback: parse from location if provided
-      const locationParts = customerLocation.split(',').map(part => part.trim());
-      city = visitData.region_province || locationParts[locationParts.length - 1] || 'غير محدد';
-      area = locationParts.length > 1 ? locationParts[0] : 'غير محدد';
-    }
-
-    // Get user_id from plumber if plumberId exists
-    let requestorUserId: number | null = null;
-    if (plumberId) {
-      const plumber = await Plumber.findByPk(plumberId);
-      if (plumber && plumber.user_id) {
-        requestorUserId = plumber.user_id;
-      }
-    }
-
-    // Create inspection request from visit report data
-    const inspectionRequest = await InspectionRequest.create({
-      requestor_id: requestorUserId,
+    await InspectionVisit.create({
       inspector_id: inspectorId,
-      user_name: customerName, // Use data from trader/plumber instead of body
-      user_phone: customerPhone, // Use data from trader/plumber instead of body
-      nationality_id: customerNationalityId,
-      area: area,
-      city: city,
-      address: customerLocation, // Use location from trader/plumber instead of body
-      seller_name: companyName || customerName, // Use company name from trader/plumber
-      seller_phone: customerPhone,
-      certificate_id: '',
-      inspection_date: new Date(),
-      description: visitData.next_action,
-      images: savedImages.length > 0 ? savedImages : [],
-      status: RequestStatus.ASSIGNED,
-      user_lat: visit.check_in_latitude ? Number(visit.check_in_latitude) : 0,
-      user_long: visit.check_in_longitude ? Number(visit.check_in_longitude) : 0,
-      visit_report_id: report.id, // Link to visit report for identification
+      trader_id: traderId || null,
+      plumber_id: plumberId || null,
+      status: VisitStatus.SCHEDULED,
+      scheduled_at: followUpDate,
+      visit_type: 'FOLLOW_UP',
+      notes: visitData.next_action,
     });
-
-    // Note: items are optional for requests created from visit reports
-    // If needed, they can be added later
   }
 
   return {
@@ -473,7 +455,6 @@ export const getVisitStatus = async (inspectorId: number, traderId?: number, plu
   };
 };
 
-
 /**
  * Get all visits for envoy (inspector)
  */
@@ -481,18 +462,21 @@ export const getEnvoyVisits = async (inspectorId: number) => {
   const visits = await InspectionVisit.findAll({
     where: {
       inspector_id: inspectorId,
+      status: { [Op.ne]: VisitStatus.SCHEDULED },
     },
     include: [
       {
         model: Trader,
         as: 'trader',
         attributes: ['id', 'city', 'area'],
+        include: [{ model: User, as: 'user', attributes: ['name'] }],
         required: false,
       },
       {
         model: Plumber,
         as: 'plumber',
         attributes: ['id', 'city', 'area'],
+        include: [{ model: User, as: 'user', attributes: ['name'] }],
         required: false,
       },
       {
@@ -512,11 +496,13 @@ export const getEnvoyVisits = async (inspectorId: number) => {
     trader_area: visit.trader?.area,
     plumber_city: visit.plumber?.city,
     plumber_area: visit.plumber?.area,
-    company_name: visit.visitReport?.company_name || null,
+    company_name: visit.trader?.user?.name || visit.plumber?.user?.name || visit.visitReport?.company_name || null,
     visit_result: visit.visitReport?.visit_result || null,
     sales_value: visit.visitReport?.sales_value || 0,
     status: visit.status,
+    scheduled_at: visit.scheduled_at,
     date: visit.createdAt,
+
   }));
 };
 
@@ -530,6 +516,7 @@ export const getAdminVisits = async (page: number = 1, limit: number = 20, filte
   if (filters.trader_id) where.trader_id = filters.trader_id;
   if (filters.plumber_id) where.plumber_id = filters.plumber_id;
   if (filters.inspector_id) where.inspector_id = filters.inspector_id;
+  if (filters.status) where.status = filters.status;
 
   const { count, rows: visits } = await InspectionVisit.findAndCountAll({
     where,
@@ -688,6 +675,7 @@ export const getAdminVisitDetails = async (visitId: number) => {
   return visitData;
 };
 
+
 /**
  * Update visit status (admin only)
  */
@@ -828,6 +816,37 @@ export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
 };
 
 /**
+ * Get visits for a specific client that have a next_action value
+ */
+export const getClientNextActions = async (inspectorId: number, traderId?: number, plumberId?: number) => {
+  const visits = await InspectionVisit.findAll({
+    where: {
+      inspector_id: inspectorId,
+      ...(traderId ? { trader_id: traderId } : {}),
+      ...(plumberId ? { plumber_id: plumberId } : {}),
+    },
+    include: [
+      {
+        model: VisitReport,
+        as: 'visitReport',
+        where: {
+          next_action: {
+            [Op.and]: [
+              { [Op.ne]: null },
+              { [Op.ne]: '' },
+            ],
+          },
+        },
+        required: true,
+      },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+
+  return visits;
+};
+
+/**
  * Get visit timing statistics for an envoy on a specific day
  */
 export const getEnvoyVisitTiming = async (inspectorId: number, date: Date) => {
@@ -894,6 +913,49 @@ export const getEnvoyVisitTiming = async (inspectorId: number, date: Date) => {
     inspector_id: inspectorId,
     visits: visitTimings,
   };
+};
+
+/**
+ * Get all scheduled tasks for an envoy
+ */
+export const getEnvoyTasks = async (inspectorId: number) => {
+  const tasks = await InspectionVisit.findAll({
+    where: {
+      inspector_id: inspectorId,
+      status: VisitStatus.SCHEDULED,
+    },
+    include: [
+      {
+        model: Trader,
+        as: 'trader',
+        attributes: ['id', 'city', 'area'],
+        include: [{ model: User, as: 'user', attributes: ['name', 'phone'] }],
+      },
+      {
+        model: Plumber,
+        as: 'plumber',
+        attributes: ['id', 'city', 'area'],
+        include: [{ model: User, as: 'user', attributes: ['name', 'phone'] }],
+      },
+    ],
+    order: [['scheduled_at', 'ASC']],
+  });
+
+  return tasks.map(task => {
+    const client = task.trader || task.plumber;
+    return {
+      id: task.id,
+      trader_id: task.trader_id,
+      plumber_id: task.plumber_id,
+      client_name: client?.user?.name || 'Unknown',
+      client_phone: client?.user?.phone || 'Unknown',
+      city: client?.city || 'Unknown',
+      area: client?.area || 'Unknown',
+      scheduled_at: task.scheduled_at,
+      notes: task.notes,
+      visit_type: task.visit_type,
+    };
+  });
 };
 
 

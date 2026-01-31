@@ -26,3 +26,11 @@ export const createNoteValidation = [
     handleValidationErrors,
     strict,
 ];
+
+export const updateProfileValidation = [
+    body('name').optional().isString().withMessage('Name must be a string'),
+    body('phone').optional().isString().withMessage('Phone must be a string'),
+    body('region').optional().isString().withMessage('Region must be a string'),
+    handleValidationErrors,
+    strict,
+];
