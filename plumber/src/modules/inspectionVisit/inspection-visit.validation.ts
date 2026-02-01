@@ -107,10 +107,9 @@ export const submitVisitReportValidation = [
   body('visit_type').optional().isString().withMessage('visit_type must be a string'),
   // Visit Details
   body('visit_result')
+    .optional()
     .isString()
-    .withMessage('visit_result must be a string')
-    .notEmpty()
-    .withMessage('visit_result is required'),
+    .withMessage('visit_result must be a string'),
   body('interest_level').optional().isString().withMessage('interest_level must be a string'),
   body('purchase_readiness').optional().isString().withMessage('purchase_readiness must be a string'),
   body('authority_level').optional().isString().withMessage('authority_level must be a string'),
@@ -181,6 +180,10 @@ export const submitVisitReportValidation = [
     .optional()
     .isURL({ require_tld: false })
     .withMessage('Each image must be a valid URL'),
+  body('is_draft')
+    .optional()
+    .isBoolean()
+    .withMessage('is_draft must be a boolean'),
   handleValidationErrors,
   strict,
 ];
@@ -207,6 +210,68 @@ export const getClientNextActionsValidation = [
   query()
     .custom((value, { req }) => {
       if (req.query?.trader_id && req.query?.plumber_id) {
+        throw new Error('Cannot provide both trader_id and plumber_id');
+      }
+      return true;
+    }),
+  handleValidationErrors,
+  strict,
+];
+
+export const getReportByVisitIdValidation = [
+  param('visitId')
+    .isInt()
+    .withMessage('visitId must be a number')
+    .notEmpty()
+    .withMessage('visitId is required'),
+  handleValidationErrors,
+  strict,
+];
+
+export const updateVisitReportValidation = [
+  param('id')
+    .isInt()
+    .withMessage('report id must be a number')
+    .notEmpty()
+    .withMessage('report id is required'),
+  // Reuse body validations but make inspection_visit_id optional for PATCH
+  body('inspection_visit_id')
+    .optional()
+    .isInt()
+    .withMessage('inspection_visit_id must be a number'),
+  // The rest are already optional in submitVisitReportValidation except visit_result which we made optional too
+  ...submitVisitReportValidation.filter(v => {
+    // Just spread the existing validations
+    return true;
+  }),
+  handleValidationErrors,
+  strict,
+];
+
+export const createScheduledVisitValidation = [
+  body('scheduled_at')
+    .notEmpty()
+    .withMessage('scheduled_at is required')
+    .isISO8601()
+    .withMessage('scheduled_at must be a valid ISO8601 date'),
+  body('trader_id')
+    .optional()
+    .isInt()
+    .withMessage('trader_id must be a number'),
+  body('plumber_id')
+    .optional()
+    .isInt()
+    .withMessage('plumber_id must be a number'),
+  body('notes')
+    .optional()
+    .isString()
+    .withMessage('notes must be a string'),
+  body()
+    .custom((value, { req }) => {
+      if (!req.body.trader_id && !req.body.plumber_id) {
+        throw new Error('Either trader_id or plumber_id is required');
+      }
+      if (req.body.trader_id && req.body.plumber_id) {
         throw new Error('Cannot provide both trader_id and plumber_id');
       }
       return true;

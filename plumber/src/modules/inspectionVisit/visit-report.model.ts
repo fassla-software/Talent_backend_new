@@ -3,6 +3,11 @@ import sequelize from '../../config/db';
 import Trader from '../trader/trader.model';
 import Plumber from '../plumber/plumber.model';
 
+export enum ReportStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+}
+
 class VisitReport extends Model {
   public id!: number;
   public trader_id?: number | null;
@@ -29,6 +34,9 @@ class VisitReport extends Model {
 
   // Sales Classification (تصنيف المبيعات)
   public sales_classification?: string | null; // من report_dropdown_options (مباشر / غير مباشر)
+
+  // Status
+  public status!: ReportStatus;
 
   // Additional Notes
   public additional_notes?: string | null;
@@ -105,7 +113,7 @@ VisitReport.init(
     },
     visit_result: {
       type: DataTypes.STRING(100),
-      allowNull: false,
+      allowNull: true,
     },
     interest_level: {
       type: DataTypes.STRING(100),
@@ -138,6 +146,11 @@ VisitReport.init(
     sales_classification: {
       type: DataTypes.STRING(100),
       allowNull: true,
+    },
+    status: {
+      type: DataTypes.ENUM('DRAFT', 'SUBMITTED'),
+      allowNull: false,
+      defaultValue: ReportStatus.DRAFT,
     },
     additional_notes: {
       type: DataTypes.TEXT,

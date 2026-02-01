@@ -15,6 +15,9 @@ import {
   getClientNextActionsHandler,
   getEnvoyTasksHandler,
   deleteVisitHandler,
+  getReportByVisitIdHandler,
+  updateVisitReportHandler,
+  createScheduledVisitHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -23,7 +26,10 @@ import {
   checkOutValidation,
   submitVisitReportValidation,
   getVisitStatusValidation,
-  getClientNextActionsValidation
+  getClientNextActionsValidation,
+  getReportByVisitIdValidation,
+  updateVisitReportValidation,
+  createScheduledVisitValidation,
 } from './inspection-visit.validation';
 import { Roles } from '../role/role.model';
 
@@ -82,6 +88,15 @@ router.post(
   checkOutValidation,
   checkOutHandler,
 );
+
+router.post(
+  '/schedule',
+  authenticate,
+  authorize(Roles.Envoy),
+  createScheduledVisitValidation,
+  createScheduledVisitHandler,
+);
+
 router.get(
   '/status/:id',
   authenticate,
@@ -124,6 +139,25 @@ router.delete(
   authenticate,
   authorize(Roles.Envoy),
   deleteVisitHandler,
+);
+
+// Visit Report Routes
+router.get(
+  '/report/visit/:visitId',
+  authenticate,
+  authorize(Roles.Envoy),
+  getReportByVisitIdValidation,
+  getReportByVisitIdHandler,
+);
+
+router.patch(
+  '/report/:id',
+  authenticate,
+  authorize(Roles.Envoy),
+  upload.array('images', 10),
+  validateImages,
+  updateVisitReportValidation,
+  updateVisitReportHandler,
 );
 
 // Admin routes

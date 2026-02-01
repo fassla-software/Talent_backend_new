@@ -18,9 +18,13 @@ import {
   getEnvoyVisitTiming,
   getClientNextActions,
   getEnvoyTasks,
+  getReportByVisitId,
+  updateVisitReport,
+  createScheduledVisit,
   ICheckInData,
   ICheckOutData,
   ISubmitVisitReportData,
+  IScheduleVisitData,
   deleteVisit,
 } from './inspection-visit.service';
 import { optimizeImage, deleteImage } from '../upload/upload.utils';
@@ -211,6 +215,71 @@ export const deleteVisitHandler = asyncHandler(async (req: AuthenticatedRequest,
     message: 'Inspection visit deleted successfully',
   });
 }, 'Failed to delete inspection visit');
+
+export const getReportByVisitIdHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const visitId = parseInt(req.params.visitId);
+
+  const report = await getReportByVisitId(inspectorId, visitId);
+
+  res.status(200).json({
+    message: 'Visit report retrieved successfully',
+    data: report,
+  });
+}, 'Failed to get visit report');
+
+export const updateVisitReportHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const reportId = parseInt(req.params.id);
+  const files = req.files as Express.Multer.File[];
+  const data: ISubmitVisitReportData = req.body;
+
+  // Process uploaded images (similar to submitVisitReportHandler)
+  let imageUrls: string[] = [];
+  if (files && files.length > 0) {
+    const optimizedPath = path.join(__dirname, '../../../uploads');
+    const BASE_URL = getConfig('BASE_URL');
+
+    imageUrls = await Promise.all(
+      files.map(async file => {
+        try {
+          const fileName = `${file.filename.split('.').shift()}.webp`;
+          const optimizedFullPath = path.join(optimizedPath, `optimized-${fileName}`);
+          await optimizeImage(file.path, optimizedFullPath);
+          await deleteImage(file.path);
+          return `${BASE_URL}/uploads/optimized-${fileName}`;
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return `${BASE_URL}/uploads/${file.filename}`;
+        }
+      }),
+    );
+  }
+
+  const dataWithImages: ISubmitVisitReportData = {
+    ...data,
+    images: imageUrls.length > 0 ? imageUrls : undefined,
+  };
+
+  const report = await updateVisitReport(inspectorId, reportId, dataWithImages);
+
+  res.status(200).json({
+    message: 'Visit report updated successfully',
+    data: report,
+  });
+}, 'Failed to update visit report');
+
+export const createScheduledVisitHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const data: IScheduleVisitData = req.body;
+
+  const visit = await createScheduledVisit(inspectorId, data);
+
+  res.status(201).json({
+    message: 'Visit scheduled successfully',
+    data: visit,
+  });
+}, 'Failed to schedule visit');
 
 
 

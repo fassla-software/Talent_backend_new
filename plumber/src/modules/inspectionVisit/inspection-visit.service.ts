@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import HttpError from '../../utils/HttpError';
 import InspectionVisit, { VisitStatus } from './inspection-visit.model';
-import VisitReport from './visit-report.model';
+import VisitReport, { ReportStatus } from './visit-report.model';
 import User from '../user/user.model';
 import Trader, { TraderActivityStatus } from '../trader/trader.model';
 import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
@@ -52,6 +52,7 @@ export interface ISubmitVisitReportData {
   // Additional
   notes?: string;
   images?: string[];
+  is_draft?: boolean;
 }
 
 
@@ -167,7 +168,7 @@ export const checkIn = async (inspectorId: number, data: ICheckInData) => {
  * Submit visit report form before check-out
  */
 export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitReportData) => {
-  const { images, inspection_visit_id, ...visitData } = data;
+  const { images, inspection_visit_id, is_draft, ...visitData } = data;
 
   // Find visit by inspection_visit_id
   const visit = await InspectionVisit.findByPk(inspection_visit_id);
@@ -324,6 +325,7 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
       sales_classification: visitData.sales_classification,
       additional_notes: visitData.notes,
       photos: savedImages.length > 0 ? savedImages : null,
+      status: is_draft ? ReportStatus.DRAFT : ReportStatus.SUBMITTED,
     },
     {
       returning: true,
@@ -337,8 +339,8 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     report_id: report.id,
   });
 
-  // If next_action is provided, create a new SCHEDULED inspection visit for the inspector
-  if (visitData.next_action === 'field_visit' && visitData.next_action.trim() !== '') {
+  // If next_action is provided and it's NOT a draft, create a new SCHEDULED inspection visit
+  if (!is_draft && visitData.next_action === 'field_visit' && visitData.next_action.trim() !== '') {
     const followUpDate = visitData.follow_up_date ? new Date(visitData.follow_up_date) : new Date();
 
     await InspectionVisit.create({
@@ -802,16 +804,11 @@ export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
       start_date: formatDate(lastWeekStart),
       end_date: formatDate(lastWeekEnd),
     },
-    progress: {
-      percentage: progressPercentage,
-      difference,
-      trend,
-    },
-    active_clients: {
-      traders: activeTraders,
-      plumbers: activePlumbers,
-      total: activeTraders + activePlumbers,
-    },
+    difference,
+    progress: progressPercentage,
+    trend,
+    active_traders: activeTraders,
+    active_plumbers: activePlumbers,
   };
 };
 
@@ -986,6 +983,144 @@ export const getEnvoyTasks = async (inspectorId: number) => {
       visit_type: task.visit_type,
     };
   });
+};
+
+/**
+ * Get report by visit ID
+ */
+export const getReportByVisitId = async (inspectorId: number, visitId: number) => {
+  const visit = await InspectionVisit.findByPk(visitId, {
+    include: [
+      {
+        model: VisitReport,
+        as: 'visitReport',
+      },
+    ],
+  });
+
+  if (!visit) {
+    throw new HttpError('Inspection visit not found', 404);
+  }
+
+  // Verify ownership
+  if (visit.inspector_id !== inspectorId) {
+    throw new HttpError('This inspection visit does not belong to you', 403);
+  }
+
+  if (!visit.visitReport) {
+    throw new HttpError('No report found for this visit', 404);
+  }
+
+  const report = visit.visitReport.toJSON();
+  if (report.photos) {
+    report.photos = viewImages(report.photos);
+  }
+
+  return report;
+};
+
+/**
+ * Update an existing visit report (draft)
+ */
+export const updateVisitReport = async (inspectorId: number, reportId: number, data: ISubmitVisitReportData) => {
+  const { images, inspection_visit_id, is_draft, ...visitData } = data;
+
+  const report = await VisitReport.findByPk(reportId);
+
+  if (!report) {
+    throw new HttpError('Visit report not found', 404);
+  }
+
+  // Find the associated visit to verify ownership
+  const visit = await InspectionVisit.findOne({
+    where: { report_id: reportId },
+  });
+
+  if (!visit) {
+    throw new HttpError('Inspection visit associated with this report not found', 404);
+  }
+
+  if (visit.inspector_id !== inspectorId) {
+    throw new HttpError('This report does not belong to you', 403);
+  }
+
+  if (report.status === ReportStatus.SUBMITTED && !is_draft) {
+    // Already submitted, maybe allow some updates or restrict?
+    // For now, let's allow it if they explicitly want to "update" a submitted report, 
+    // but usually suspension is for drafts.
+  }
+
+  // Save images if provided
+  let savedImages: string[] = report.photos || [];
+  if (images && images.length > 0) {
+    const newImages = saveImages(images) as string[];
+    savedImages = [...savedImages, ...newImages];
+  }
+
+  await report.update({
+    region_province: visitData.region_province,
+    client_type: visitData.client_type,
+    visit_type: visitData.visit_type,
+    visit_result: visitData.visit_result,
+    interest_level: visitData.interest_level,
+    purchase_readiness: visitData.purchase_readiness,
+    authority_level: visitData.authority_level,
+    sales_value: visitData.sales_value,
+    planned_purchase_date: visitData.planned_purchase_date ? new Date(visitData.planned_purchase_date) : report.planned_purchase_date,
+    outcome_classification: visitData.outcome_classification,
+    next_action: visitData.next_action,
+    sales_classification: visitData.sales_classification,
+    additional_notes: visitData.notes,
+    photos: savedImages,
+    status: is_draft ? ReportStatus.DRAFT : ReportStatus.SUBMITTED,
+  });
+
+  // If finalized (not draft) and next_action is field_visit, handle scheduling
+  if (!is_draft && visitData.next_action === 'field_visit' && visitData.next_action.trim() !== '') {
+    const followUpDate = visitData.follow_up_date ? new Date(visitData.follow_up_date) : new Date();
+
+    await InspectionVisit.create({
+      inspector_id: inspectorId,
+      trader_id: visit.trader_id,
+      plumber_id: visit.plumber_id,
+      status: VisitStatus.SCHEDULED,
+      scheduled_at: followUpDate,
+      visit_type: 'FOLLOW_UP',
+      notes: visitData.next_action,
+    });
+  }
+
+  return report;
+};
+
+export interface IScheduleVisitData {
+  trader_id?: number;
+  plumber_id?: number;
+  scheduled_at: string | Date;
+  notes?: string;
+}
+
+/**
+ * Manually create a scheduled follow-up visit
+ */
+export const createScheduledVisit = async (inspectorId: number, data: IScheduleVisitData) => {
+  const { trader_id, plumber_id, scheduled_at, notes } = data;
+
+  if (!trader_id && !plumber_id) {
+    throw new HttpError('Either trader_id or plumber_id is required', 400);
+  }
+
+  const visit = await InspectionVisit.create({
+    inspector_id: inspectorId,
+    trader_id: trader_id || null,
+    plumber_id: plumber_id || null,
+    status: VisitStatus.SCHEDULED,
+    visit_type: 'FOLLOW_UP',
+    scheduled_at: new Date(scheduled_at),
+    notes: notes || null,
+  });
+
+  return visit;
 };
 
 
