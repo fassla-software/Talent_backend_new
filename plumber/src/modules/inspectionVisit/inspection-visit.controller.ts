@@ -21,6 +21,7 @@ import {
   ICheckInData,
   ICheckOutData,
   ISubmitVisitReportData,
+  deleteVisit,
 } from './inspection-visit.service';
 import { optimizeImage, deleteImage } from '../upload/upload.utils';
 
@@ -199,5 +200,17 @@ export const getEnvoyTasksHandler = asyncHandler(async (req: AuthenticatedReques
     data: tasks,
   });
 }, 'Failed to get envoy tasks');
+
+export const deleteVisitHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const inspectorId = parseInt(req.user!.id);
+  const visitId = parseInt(req.params.id);
+
+  await deleteVisit(inspectorId, visitId);
+
+  res.status(200).json({
+    message: 'Inspection visit deleted successfully',
+  });
+}, 'Failed to delete inspection visit');
+
 
 

@@ -14,6 +14,7 @@ import {
   getEnvoyVisitTimingHandler,
   getClientNextActionsHandler,
   getEnvoyTasksHandler,
+  deleteVisitHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -117,6 +118,14 @@ router.get(
   authorize(Roles.Envoy),
   getEnvoyTasksHandler,
 );
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize(Roles.Envoy),
+  deleteVisitHandler,
+);
+
 // Admin routes
 router.get(
   '/admin',

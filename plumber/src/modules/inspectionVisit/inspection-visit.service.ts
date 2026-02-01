@@ -816,6 +816,36 @@ export const getEnvoyWeeklyStatistics = async (inspectorId: number) => {
 };
 
 /**
+ * Delete an inspection visit
+ */
+export const deleteVisit = async (inspectorId: number, visitId: number) => {
+  const visit = await InspectionVisit.findByPk(visitId);
+
+  if (!visit) {
+    throw new HttpError('Inspection visit not found', 404);
+  }
+
+  // Verify ownership
+  if (visit.inspector_id !== inspectorId) {
+    throw new HttpError('This inspection visit does not belong to you', 403);
+  }
+
+  // Delete associated report if it exists
+  if (visit.report_id) {
+    await VisitReport.destroy({
+      where: { id: visit.report_id },
+    });
+  }
+
+  // Delete the visit
+  await visit.destroy();
+
+  return true;
+};
+
+
+
+/**
  * Get visits for a specific client that have a next_action value
  */
 export const getClientNextActions = async (inspectorId: number, traderId?: number, plumberId?: number) => {

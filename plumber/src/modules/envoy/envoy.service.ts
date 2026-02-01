@@ -192,18 +192,24 @@ export const createNote = async (envoyId: number, clientId: number, content: str
 };
 
 export const getEnvoyClients = async (envoyId: number, name?: string, phone?: string) => {
-    const userWhere: any = {};
-    if (name) userWhere.name = { [Op.like]: `%${name}%` };
-    if (phone) userWhere.phone = { [Op.like]: `%${phone}%` };
+    const userWhere: any = {
+        status: 'APPROVED',
+    };
 
-    const hasSearch = Object.keys(userWhere).length > 0;
+    const searchConditions: any = {};
+    if (name) searchConditions.name = { [Op.like]: `%${name}%` };
+    if (phone) searchConditions.phone = { [Op.like]: `%${phone}%` };
+
+    Object.assign(userWhere, searchConditions);
+
+    const hasExplicitSearch = Object.keys(searchConditions).length > 0;
 
     // Common include for both Traders and Plumbers
     const getInclude = () => [
         {
             model: User,
             as: 'user',
-            where: hasSearch ? userWhere : undefined,
+            where: userWhere,
             include: [
                 {
                     model: Ticket,
@@ -234,16 +240,28 @@ export const getEnvoyClients = async (envoyId: number, name?: string, phone?: st
                 }
             ],
             where: { inspector_id: envoyId },
-            required: !hasSearch, // If no search, only return clients with visits by this envoy
+            required: false, // LEFT JOIN to allow checking for existence via top-level WHERE
         },
     ];
 
+    const mainFilter: any = {};
+    if (!hasExplicitSearch) {
+        mainFilter[Op.or] = [
+            { inspector_id: envoyId },
+            { '$inspectionVisits.id$': { [Op.ne]: null } }
+        ];
+    }
+
     const traders = await Trader.findAll({
+        where: mainFilter,
         include: getInclude(),
+        subQuery: false, // Required for filtering on included associations with OR
     });
 
     const plumbers = await Plumber.findAll({
+        where: mainFilter,
         include: getInclude(),
+        subQuery: false, // Required for filtering on included associations with OR
     });
 
     const processClient = (client: any, role: string) => {
