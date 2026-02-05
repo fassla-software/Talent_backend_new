@@ -2,6 +2,9 @@
 @section('content')
     <div class="d-flex align-items-center flex-wrap gap-3 justify-content-between px-3">
         <h4>{{ __('Sales and Marketing Visits') }}</h4>
+        <a href="{{ route('admin.inspectionVisit.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
+            <i class="fa-solid fa-calendar-plus"></i> {{ __('Schedule Visit') }}
+        </a>
     </div>
 
     <div class="container-fluid mt-3">

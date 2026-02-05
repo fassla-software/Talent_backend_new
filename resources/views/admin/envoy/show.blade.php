@@ -1,5 +1,20 @@
 @extends('layouts.app')
 
+@php
+    $currentYearMonth = now()->format('Y-m');
+    $earnedMetricAwards = [];
+    foreach($envoyAwards as $award) {
+        if (str_contains($award['reason'], 'Automatic:') && str_contains($award['reason'], $currentYearMonth)) {
+            // Extract metric name from "Automatic: [metric] Target Met - YYYY-MM"
+            // Reason format: "Automatic: sales Target Met - 2026-02"
+            preg_match('/Automatic: (\w+) Target Met/', $award['reason'], $matches);
+            if (isset($matches[1])) {
+                $earnedMetricAwards[strtolower($matches[1])] = true;
+            }
+        }
+    }
+@endphp
+
 @section('content')
     <div class="page-title">
         <div class="d-flex gap-2 align-items-center justify-content-between">
@@ -38,10 +53,20 @@
         </div>
 
         <div class="col-lg-8">
-            <!-- General Overview Section -->
+            <!-- General Overview Section (Fixed at top) -->
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ __('General Overview') }}</h5>
+                    <form action="{{ route('admin.envoy.show', $user->id) }}" method="GET" class="d-flex gap-2">
+                        <input type="hidden" name="date" value="{{ request('date', now()->toDateString()) }}">
+                        <select name="period" class="form-control form-control-sm">
+                            <option value="week" {{ request('period') == 'week' ? 'selected' : '' }}>{{ __('This Week') }}</option>
+                            <option value="month" {{ request('period') == 'month' ? 'selected' : '' }}>{{ __('This Month') }}</option>
+                            <option value="quarter" {{ request('period') == 'quarter' ? 'selected' : '' }}>{{ __('This Quarter') }}</option>
+                            <option value="year" {{ request('period') == 'year' ? 'selected' : '' }}>{{ __('This Year') }}</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
+                    </form>
                 </div>
                 <div class="card-body">
                     @if ($salesStats && isset($salesStats['overview']))
@@ -56,16 +81,16 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Target') }}</h6>
-                                    <h3 class="mb-0">{{ number_format($salesStats['overview']['target'], 2) }}</h3>
+                                    <h6 class="text-muted mb-2">{{ __('Target Sales') }}</h6>
+                                    <h3 class="mb-0">{{ number_format($user->envoySetting->target_sales ?? 0, 2) }}</h3>
                                     <small class="text-muted">{{ __('Monthly') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Total Sales') }}</h6>
-                                    <h3 class="mb-0 text-success">{{ number_format($salesStats['sales']['total']['amount'], 2) }}</h3>
-                                    <small class="text-muted">{{ __('Current Sum') }}</small>
+                                <div class="border rounded p-3 bg-primary text-white">
+                                    <h6 class="text-white-50 mb-2">{{ __('Performance Score') }}</h6>
+                                    <h3 class="mb-0">{{ number_format($salesStats['performance_score'] ?? 0, 1) }}%</h3>
+                                    <small class="text-white-50">{{ __('Weighted Average') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -103,203 +128,274 @@
                 </div>
             </div>
 
-            <!-- Sales Statistics Section -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ __('Sales Statistics') }}</h5>
-                    <form action="{{ route('admin.envoy.show', $user->id) }}" method="GET" class="d-flex gap-2">
-                        <input type="hidden" name="date" value="{{ request('date', now()->toDateString()) }}">
-                        <select name="period" class="form-control form-control-sm">
-                            <option value="week" {{ request('period') == 'week' ? 'selected' : '' }}>{{ __('This Week') }}</option>
-                            <option value="month" {{ request('period') == 'month' ? 'selected' : '' }}>{{ __('This Month') }}</option>
-                            <option value="quarter" {{ request('period') == 'quarter' ? 'selected' : '' }}>{{ __('This Quarter') }}</option>
-                            <option value="year" {{ request('period') == 'year' ? 'selected' : '' }}>{{ __('This Year') }}</option>
-                        </select>
-                        <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
-                    </form>
-                </div>
-                <div class="card-body">
-                    @if ($salesStats)
-                        <div class="row text-center">
-                            <div class="col-md-4">
-                                <div class="border rounded p-3 bg-light">
-                                    <h6 class="text-muted mb-2">{{ __('Total Sales') }}</h6>
-                                    <h3 class="mb-0">{{ number_format($salesStats['sales']['total']['amount'], 2) }}</h3>
-                                    <small class="text-muted">{{ $salesStats['sales']['total']['count'] }} {{ __('Visits') }}</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Direct Sales') }}</h6>
-                                    <h3 class="mb-0 text-success">{{ number_format($salesStats['sales']['direct']['amount'], 2) }}</h3>
-                                    <div class="progress mt-2" style="height: 5px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ $salesStats['sales']['direct']['percentage'] }}%"></div>
-                                    </div>
-                                    <small class="text-muted">{{ $salesStats['sales']['direct']['percentage'] }}% {{ __('of total') }}</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Indirect Sales') }}</h6>
-                                    <h3 class="mb-0 text-primary">{{ number_format($salesStats['sales']['indirect']['amount'], 2) }}</h3>
-                                    <div class="progress mt-2" style="height: 5px;">
-                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $salesStats['sales']['indirect']['percentage'] }}%"></div>
-                                    </div>
-                                    <small class="text-muted">{{ $salesStats['sales']['indirect']['percentage'] }}% {{ __('of total') }}</small>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Detailed Tabs Section -->
+            <ul class="nav nav-tabs mb-3" id="envoyDetailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="achievements-tab" data-bs-toggle="tab" data-bs-target="#achievements" type="button" role="tab" aria-controls="achievements" aria-selected="true">
+                        <i class="fa-solid fa-medal me-1"></i> {{ __('Achievements') }}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab" aria-controls="stats" aria-selected="false">
+                        <i class="fa-solid fa-chart-pie me-1"></i> {{ __('Statistics') }}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab" aria-controls="activity" aria-selected="false">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i> {{ __('Activity') }}
+                    </button>
+                </li>
+            </ul>
 
-                        <div class="row mt-4 text-center">
-                            <div class="col-md-6">
-                                <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Conversion Rate') }}</h6>
-                                    <h3 class="mb-0">{{ $salesStats['conversion']['conversion_rate'] }}%</h3>
-                                    <small class="text-muted">{{ $salesStats['conversion']['conversions'] }} {{ __('Conversions') }} / {{ $salesStats['conversion']['total_clients'] }} {{ __('Clients') }}</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="border rounded p-3">
-                                    <h6 class="text-muted mb-2">{{ __('Retention Rate') }}</h6>
-                                    <h3 class="mb-0">{{ $salesStats['retention']['retention_rate'] }}%</h3>
-                                    <small class="text-muted">{{ $salesStats['retention']['active_clients'] }} {{ __('Active') }} / {{ $salesStats['retention']['total_clients'] }} {{ __('Total') }}</small>
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <p class="text-center text-muted py-4">{{ __('No statistics available for this period.') }}</p>
-                    @endif
-                </div>
-            </div>
-
-            <!-- Visit Timing Section -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ __('Visit Timing Statistics') }}</h5>
-                    <form action="{{ route('admin.envoy.show', $user->id) }}" method="GET" class="d-flex gap-2">
-                        <input type="hidden" name="period" value="{{ request('period', 'week') }}">
-                        <input type="date" name="date" class="form-control form-control-sm" value="{{ request('date', now()->toDateString()) }}">
-                        <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
-                    </form>
-                </div>
-
-                <div class="card-body">
-                    @if ($timingData && count($timingData['visits']) > 0)
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>{{ __('Visit ID') }}</th>
-                                        <th>{{ __('Client Name') }}</th>
-                                        <th>{{ __('Check-in') }}</th>
-                                        <th>{{ __('Check-out') }}</th>
-                                        <th>{{ __('Duration') }}</th>
-                                        <th>{{ __('Gap Since Prev') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($timingData['visits'] as $visit)
-                                        <tr>
-                                            <td>{{ $visit['visit_id'] }}</td>
-                                            <td>{{ $visit['client_name'] }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($visit['check_in_at'])->format('H:i:s') }}</td>
-                                            <td>{{ $visit['check_out_at'] ? \Carbon\Carbon::parse($visit['check_out_at'])->format('H:i:s') : 'N/A' }}</td>
-                                            <td>
-                                                @if ($visit['duration_minutes'] !== null)
-                                                    {{ $visit['duration_minutes'] }} {{ __('min') }}
-                                                @else
-                                                    <span class="text-muted">{{ __('In Progress') }}</span>
+            <div class="tab-content" id="envoyDetailTabsContent">
+                <!-- Achievements Tab -->
+                <div class="tab-pane fade show active" id="achievements" role="tabpanel" aria-labelledby="achievements-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            @if (isset($salesStats['performance_details']) && count($salesStats['performance_details']) > 0)
+                                <h6 class="mb-3">{{ __('Metric Achievement Details') }}</h6>
+                                <div class="row">
+                                    @foreach ($salesStats['performance_details'] as $metric)
+                                        <div class="col-md-3 mb-3">
+                                            <div class="border rounded p-2 text-center {{ $metric['is_exceeded'] ? 'bg-success-subtle border-success' : '' }}">
+                                                <small class="text-muted d-block text-uppercase mb-1" style="font-size: 0.7rem;">{{ __($metric['key']) }}</small>
+                                                <h5 class="mb-1 {{ $metric['is_exceeded'] ? 'text-success' : '' }}">
+                                                    {{ number_format($metric['achievement_percent'], 1) }}%
+                                                </h5>
+                                                @if ($metric['is_exceeded'])
+                                                    <span class="badge bg-success" style="font-size: 0.6rem;">{{ __('Target Exceeded!') }}</span>
                                                 @endif
-                                            </td>
-                                            <td>
-                                                @if ($visit['time_since_previous_visit_minutes'] !== null)
-                                                    {{ $visit['time_since_previous_visit_minutes'] }} {{ __('min') }}
-                                                @else
-                                                    <span class="text-muted">-</span>
+
+                                                @if (isset($earnedMetricAwards[strtolower($metric['key'])]))
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">
+                                                            <i class="fa-solid fa-trophy"></i> {{ __('Reward Earned!') }}
+                                                        </span>
+                                                    </div>
                                                 @endif
-                                            </td>
-                                        </tr>
+                                                <div class="mt-2 text-muted" style="font-size: 0.7rem;">
+                                                    {{ __('Target') }}: {{ $metric['target'] }}
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endforeach
-                                </tbody>
-                            </table>
+                                </div>
+                            @else
+                                <p class="text-center text-muted py-3">{{ __('No achievement data available.') }}</p>
+                            @endif
                         </div>
-                    @else
-                        <div class="text-center py-4">
-                            <i class="fa-solid fa-calendar-xmark fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">{{ __('No visits found for this date.') }}</p>
+                    </div>
+                </div>
+
+                <!-- Statistics Tab -->
+                <div class="tab-pane fade" id="stats" role="tabpanel" aria-labelledby="stats-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            @if ($salesStats)
+                                <div class="row text-center mb-4">
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 bg-light">
+                                            <h6 class="text-muted mb-2">{{ __('Total Sales') }}</h6>
+                                            <h3 class="mb-0">{{ number_format($salesStats['sales']['total']['amount'], 2) }}</h3>
+                                            <small class="text-muted">{{ $salesStats['sales']['total']['count'] }} {{ __('Invoices') }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3">
+                                            <h6 class="text-muted mb-2">{{ __('Direct Sales') }}</h6>
+                                            <h3 class="mb-0 text-success">{{ number_format($salesStats['sales']['direct']['amount'], 2) }}</h3>
+                                            <div class="progress mt-2" style="height: 5px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ $salesStats['sales']['direct']['percentage'] }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ $salesStats['sales']['direct']['percentage'] }}%</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3">
+                                            <h6 class="text-muted mb-2">{{ __('Indirect Sales') }}</h6>
+                                            <h3 class="mb-0 text-primary">{{ number_format($salesStats['sales']['indirect']['amount'], 2) }}</h3>
+                                            <div class="progress mt-2" style="height: 5px;">
+                                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $salesStats['sales']['indirect']['percentage'] }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ $salesStats['sales']['indirect']['percentage'] }}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center">
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3">
+                                            <h6 class="text-muted mb-2">{{ __('Conversion Rate') }}</h6>
+                                            <h3 class="mb-0">{{ $salesStats['conversion']['conversion_rate'] }}%</h3>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3">
+                                            <h6 class="text-muted mb-2">{{ __('Retention Rate') }}</h6>
+                                            <h3 class="mb-0">{{ $salesStats['retention']['retention_rate'] }}%</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <p class="text-center text-muted py-3">{{ __('No statistics available.') }}</p>
+                            @endif
                         </div>
-                    @endif
+                    </div>
+                </div>
+
+                <!-- Activity Tab -->
+                <div class="tab-pane fade" id="activity" role="tabpanel" aria-labelledby="activity-tab">
+                    <!-- Visit Timing Section -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                            <h6 class="mb-0">{{ __('Visit Timing') }}</h6>
+                            <form action="{{ route('admin.envoy.show', $user->id) }}" method="GET" class="d-flex gap-2">
+                                <input type="hidden" name="period" value="{{ request('period', 'week') }}">
+                                <input type="date" name="date" class="form-control form-control-sm" value="{{ request('date', now()->toDateString()) }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Go') }}</button>
+                            </form>
+                        </div>
+                        <div class="card-body">
+                            @if ($timingData && count($timingData['visits']) > 0)
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ __('Client') }}</th>
+                                                <th>{{ __('Check-in') }}</th>
+                                                <th>{{ __('Duration') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($timingData['visits'] as $visit)
+                                                <tr>
+                                                    <td>{{ Str::limit($visit['client_name'], 20) }}</td>
+                                                    <td>{{ \Carbon\Carbon::parse($visit['check_in_at'])->format('H:i') }}</td>
+                                                    <td>{{ $visit['duration_minutes'] ?? '-' }} min</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (isset($timingPaginator))
+                                    <div class="mt-3 d-flex justify-content-center">
+                                        <div class="pagination-sm">
+                                            {{ $timingPaginator->appends(request()->except('timing_page'))->links() }}
+                                        </div>
+                                    </div>
+                                @endif
+                            @else
+                                <p class="text-center text-muted py-2">{{ __('No timing data for this date.') }}</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Recent Visits Section -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ __('Recent Visits') }}</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (isset($visits) && count($visits) > 0)
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0 text-nowrap">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ __('Client') }}</th>
+                                                <th>{{ __('Status') }}</th>
+                                                <th>{{ __('Date') }}</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($visits as $visit)
+                                                <tr>
+                                                    <td>{{ Str::limit($visit['company_name'] ?? __('N/A'), 15) }}</td>
+                                                    <td>
+                                                        <span class="badge {{ $visit['status'] == 'APPROVED' ? 'bg-success' : ($visit['status'] == 'REJECTED' ? 'bg-danger' : 'bg-warning') }} p-1" style="font-size: 0.65rem;">
+                                                            {{ $visit['status'] }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ \Carbon\Carbon::parse($visit['date'])->format('m-d H:i') }}</td>
+                                                    <td>
+                                                        <a href="{{ route('admin.inspectionVisit.show', $visit['id']) }}" class="text-info"><i class="fa fa-eye"></i></a>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (isset($visitsPaginator))
+                                    <div class="p-3 d-flex justify-content-center">
+                                        <div class="pagination-sm">
+                                            {{ $visitsPaginator->appends(request()->except('visits_page'))->links() }}
+                                        </div>
+                                    </div>
+                                @endif
+                            @else
+                                <p class="text-center text-muted py-3">{{ __('No recent visits.') }}</p>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Visits List Section -->
+            <!-- Awards & Recognition Section -->
             <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">{{ __('Recent Visits') }}</h5>
+                <div class="card-header bg-warning-subtle">
+                    <h6 class="mb-0"><i class="fa-solid fa-award me-1"></i> {{ __('Awards & Recognition') }}</h6>
                 </div>
-                <div class="card-body">
-                    @if (isset($visits) && count($visits) > 0)
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>{{ __('ID') }}</th>
-                                        <th>{{ __('Client') }}</th>
-                                        <th>{{ __('Location') }}</th>
-                                        <th>{{ __('Status') }}</th>
-                                        <th>{{ __('Result') }}</th>
-                                        <th>{{ __('Date') }}</th>
-                                        <th>{{ __('Action') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($visits as $visit)
-                                        <tr>
-                                            <td>{{ $visit['id'] }}</td>
-                                            <td>
-                                                @if($visit['company_name'])
-                                                    {{ $visit['company_name'] }}
-                                                @else
-                                                    <span class="text-muted">{{ __('N/A') }}</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if(($visit['trader_city'] ?? null) || ($visit['trader_area'] ?? null))
-                                                    {{ $visit['trader_city'] ?? '' }} - {{ $visit['trader_area'] ?? '' }}
-                                                @elseif(($visit['plumber_city'] ?? null) || ($visit['plumber_area'] ?? null))
-                                                    {{ $visit['plumber_city'] ?? '' }} - {{ $visit['plumber_area'] ?? '' }}
-                                                @else
-                                                    <span class="text-muted">{{ __('N/A') }}</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($visit['status'] == 'APPROVED')
-                                                    <span class="badge bg-success">{{ __('Approved') }}</span>
-                                                @elseif($visit['status'] == 'REJECTED')
-                                                    <span class="badge bg-danger">{{ __('Rejected') }}</span>
-                                                @else
-                                                    <span class="badge bg-warning text-dark">{{ __('Pending') }}</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ $visit['visit_result'] ?? '-' }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($visit['date'])->format('Y-m-d H:i') }}</td>
-                                            <td>
-                                                <a href="{{ route('admin.inspectionVisit.show', $visit['id']) }}" class="btn btn-sm btn-info">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                <div class="card-body p-0">
+                    @if (count($envoyAwards) > 0)
+                        <div class="list-group list-group-flush">
+                            @foreach ($envoyAwards as $award)
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0 text-primary">{{ $award['award']['title'] }}</h6>
+                                            <small class="text-muted">{{ $award['reason'] }}</small>
+                                        </div>
+                                        <span class="badge bg-light text-dark border">{{ \Carbon\Carbon::parse($award['created_at'])->format('Y-m-d') }}</span>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @else
-                        <div class="text-center py-4">
-                            <p class="text-muted">{{ __('No recent visits found.') }}</p>
-                        </div>
+                        <p class="text-center text-muted py-4 m-0">{{ __('No awards received yet.') }}</p>
                     @endif
                 </div>
             </div>
         </div>
     </div>
+</div>
+@endsection
+
+@section('scripts')
+    <script>
+        (function() {
+            const storageKey = 'envoy_show_active_tab';
+            
+            function initTabs() {
+                const activeTabId = localStorage.getItem(storageKey);
+                if (activeTabId) {
+                    const tabTrigger = document.getElementById(activeTabId);
+                    if (tabTrigger) {
+                        const tab = new bootstrap.Tab(tabTrigger);
+                        tab.show();
+                    }
+                }
+
+                document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+                    btn.addEventListener('shown.bs.tab', (e) => {
+                        localStorage.setItem(storageKey, e.target.id);
+                    });
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTabs);
+            } else {
+                initTabs();
+            }
+        })();
+    </script>
 @endsection

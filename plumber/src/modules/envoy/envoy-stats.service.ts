@@ -313,7 +313,89 @@ export const getOverviewStats = async (
         pending_count: pendingTraders + pendingPlumbers,
         total_visits: totalVisits,
         approved_visits: approvedVisits,
-        target: envoySetting?.target || 0,
+        target_sales: envoySetting?.target_sales || 0,
+        target_visits: envoySetting?.target_visits || 0,
+        target_retention_rate: envoySetting?.target_retention_rate || 0,
+        target_conversion_rate: envoySetting?.target_conversion_rate || 0,
+        envoySetting,
+    };
+};
+
+/**
+ * Calculate overall performance score
+ */
+export const calculatePerformanceScore = (
+    stats: any,
+    settings: EnvoySetting | null,
+    periodType: TimePeriodType = 'month'
+) => {
+    if (!settings) return { score: 0, metrics: [] };
+
+    // Scaling factor for targets (assuming targets in DB are monthly)
+    let scalingFactor = 1;
+    switch (periodType) {
+        case 'week': scalingFactor = 0.25; break;
+        case 'month': scalingFactor = 1; break;
+        case 'quarter': scalingFactor = 3; break;
+        case 'year': scalingFactor = 12; break;
+    }
+
+    const metricConfigs = [
+        {
+            key: 'sales',
+            actual: stats.sales.total.amount,
+            target: settings.target_sales * scalingFactor,
+            weight: settings.weight_sales,
+        },
+        {
+            key: 'visits',
+            actual: stats.overview.approved_visits,
+            target: settings.target_visits * scalingFactor,
+            weight: settings.weight_visits,
+        },
+        {
+            key: 'retention',
+            actual: stats.retention.retention_rate,
+            target: settings.target_retention_rate,
+            weight: settings.weight_retention_rate,
+        },
+        {
+            key: 'conversion',
+            actual: stats.conversion.conversion_rate,
+            target: settings.target_conversion_rate,
+            weight: settings.weight_conversion_rate,
+        },
+    ];
+
+    let totalWeightedAchievement = 0;
+    let totalWeight = 0;
+    const metrics: any[] = [];
+
+    metricConfigs.forEach(m => {
+        if (m.weight > 0) {
+            const rawAchievement = m.target > 0 ? (m.actual / m.target) : 0;
+
+            // For the OVERALL score, we cap at 100% 
+            const cappedAchievement = Math.min(rawAchievement, 1);
+
+            totalWeightedAchievement += cappedAchievement * m.weight;
+            totalWeight += m.weight;
+
+            metrics.push({
+                key: m.key,
+                actual: m.actual,
+                target: Number(m.target.toFixed(2)),
+                achievement_percent: Number((rawAchievement * 100).toFixed(2)),
+                is_exceeded: rawAchievement > 1
+            });
+        }
+    });
+
+    const finalScore = totalWeight > 0 ? Number(((totalWeightedAchievement / totalWeight) * 100).toFixed(2)) : 0;
+
+    return {
+        score: finalScore,
+        metrics
     };
 };
 
@@ -334,7 +416,7 @@ export const getEnvoyStatistics = async (
         getOverviewStats(inspectorId, period),
     ]);
 
-    return {
+    const result: any = {
         period: {
             type: period.type,
             start_date: period.start_date.toISOString().split('T')[0],
@@ -344,5 +426,13 @@ export const getEnvoyStatistics = async (
         conversion,
         retention,
         sales,
+        performance_score: 0,
+        performance_details: [],
     };
+
+    const performance = calculatePerformanceScore(result, overview.envoySetting as any, periodType);
+    result.performance_score = performance.score;
+    result.performance_details = performance.metrics;
+
+    return result;
 };

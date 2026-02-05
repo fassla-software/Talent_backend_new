@@ -281,5 +281,16 @@ export const createScheduledVisitHandler = asyncHandler(async (req: Authenticate
   });
 }, 'Failed to schedule visit');
 
+export const createAdminScheduledVisitHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { inspector_id, ...data } = req.body;
+
+  const visit = await createScheduledVisit(parseInt(inspector_id), data);
+
+  res.status(201).json({
+    message: 'Visit scheduled successfully',
+    data: visit,
+  });
+}, 'Failed to schedule visit (admin)');
+
 
 

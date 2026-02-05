@@ -508,6 +508,8 @@ Route::name('admin.')->group(function () {
         // Inspection Visits routes
         Route::controller(InspectionVisitController::class)->group(function () {
             Route::get('/inspection-visits', 'index')->name('inspectionVisit.index');
+            Route::get('/inspection-visits/create', 'create')->name('inspectionVisit.create');
+            Route::post('/inspection-visits', 'store')->name('inspectionVisit.store');
             Route::get('/inspection-visits/{id}', 'show')->name('inspectionVisit.show');
             Route::put('/inspection-visits/{id}/status', 'updateStatus')->name('inspectionVisit.updateStatus');
         });

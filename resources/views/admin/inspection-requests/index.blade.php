@@ -116,8 +116,8 @@ $statusTexts = [
         <tr>
             <th><input type="checkbox" id="selectAll"></th>
             <th>ID</th>
-            <th>User Name</th>
-            <th>User Phone</th>
+            <th>Plumber Name</th>
+            <th>Plumber Phone</th>
             <th>Area</th>
             <th>City</th>
             <th>Status</th>

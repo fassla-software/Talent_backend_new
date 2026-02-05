@@ -64,9 +64,51 @@
 --}}
 
                     <div class="col-md-6 mb-3">
-                        <label for="target" class="form-label">{{ __('Target') }}</label>
-                        <input type="number" step="0.01" name="target" id="target" class="form-control @error('target') is-invalid @enderror" value="{{ old('target', 0) }}">
-                        @error('target') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <label for="target_sales" class="form-label">{{ __('Target Sales') }}</label>
+                        <input type="number" step="0.01" name="target_sales" id="target_sales" class="form-control @error('target_sales') is-invalid @enderror" value="{{ old('target_sales', 0) }}">
+                        @error('target_sales') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="weight_sales" class="form-label">{{ __('Weight Sales (%)') }}</label>
+                        <input type="number" name="weight_sales" id="weight_sales" class="form-control @error('weight_sales') is-invalid @enderror" value="{{ old('weight_sales', 0) }}">
+                        @error('weight_sales') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="target_visits" class="form-label">{{ __('Target Visits') }}</label>
+                        <input type="number" name="target_visits" id="target_visits" class="form-control @error('target_visits') is-invalid @enderror" value="{{ old('target_visits', 0) }}">
+                        @error('target_visits') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="weight_visits" class="form-label">{{ __('Weight Visits (%)') }}</label>
+                        <input type="number" name="weight_visits" id="weight_visits" class="form-control @error('weight_visits') is-invalid @enderror" value="{{ old('weight_visits', 0) }}">
+                        @error('weight_visits') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="target_retention_rate" class="form-label">{{ __('Target Retention Rate (%)') }}</label>
+                        <input type="number" step="0.01" name="target_retention_rate" id="target_retention_rate" class="form-control @error('target_retention_rate') is-invalid @enderror" value="{{ old('target_retention_rate', 0) }}">
+                        @error('target_retention_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="weight_retention_rate" class="form-label">{{ __('Weight Retention (%)') }}</label>
+                        <input type="number" name="weight_retention_rate" id="weight_retention_rate" class="form-control @error('weight_retention_rate') is-invalid @enderror" value="{{ old('weight_retention_rate', 0) }}">
+                        @error('weight_retention_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="target_conversion_rate" class="form-label">{{ __('Target Conversion Rate (%)') }}</label>
+                        <input type="number" step="0.01" name="target_conversion_rate" id="target_conversion_rate" class="form-control @error('target_conversion_rate') is-invalid @enderror" value="{{ old('target_conversion_rate', 0) }}">
+                        @error('target_conversion_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="weight_conversion_rate" class="form-label">{{ __('Weight Conversion (%)') }}</label>
+                        <input type="number" name="weight_conversion_rate" id="weight_conversion_rate" class="form-control @error('weight_conversion_rate') is-invalid @enderror" value="{{ old('weight_conversion_rate', 0) }}">
+                        @error('weight_conversion_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
                     <div class="col-md-6 mb-3">

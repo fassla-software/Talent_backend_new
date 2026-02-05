@@ -20,6 +20,7 @@ router.get('/envoys/list', awardController.getEnvoys);
 router.post('/assign', assignAwardVal, awardController.assignAwardToEnvoy);
 router.get('/envoy-awards', awardController.getEnvoyAwards);
 router.get('/envoy-awards/:id', paramsValidator, awardController.getEnvoyAwardById);
+router.get('/envoy/:envoyId', awardController.getAwardsByEnvoyId);
 router.put('/envoy-awards/:id', updateEnvoyAwardVal, awardController.updateEnvoyAward);
 router.delete('/envoy-awards/:id', paramsValidator, awardController.deleteEnvoyAward);
 

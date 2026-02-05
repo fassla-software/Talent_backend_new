@@ -10,8 +10,14 @@ class EnvoySetting extends Model
 
     protected $fillable = [
         'user_id',
-        'weight',
-        'target',
+        'weight_sales',
+        'weight_visits',
+        'weight_retention_rate',
+        'weight_conversion_rate',
+        'target_sales',
+        'target_visits',
+        'target_retention_rate',
+        'target_conversion_rate',
         'salary',
         'incentives',
         'region',

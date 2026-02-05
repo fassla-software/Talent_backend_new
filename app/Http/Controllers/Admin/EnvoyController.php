@@ -82,8 +82,14 @@ class EnvoyController extends Controller
 
         EnvoySetting::create([
             'user_id' => $user->id,
-            'weight' => $request->weight ?? 0,
-            'target' => $request->target ?? 0,
+            'weight_sales' => $request->weight_sales ?? 0,
+            'weight_visits' => $request->weight_visits ?? 0,
+            'weight_retention_rate' => $request->weight_retention_rate ?? 0,
+            'weight_conversion_rate' => $request->weight_conversion_rate ?? 0,
+            'target_sales' => $request->target_sales ?? 0,
+            'target_visits' => $request->target_visits ?? 0,
+            'target_retention_rate' => $request->target_retention_rate ?? 0,
+            'target_conversion_rate' => $request->target_conversion_rate ?? 0,
             'salary' => $request->salary ?? 0,
             'incentives' => $request->incentives ?? 0,
             'region' => $request->region,
@@ -102,8 +108,14 @@ class EnvoyController extends Controller
 
         $date = $request->get('date', now()->toDateString());
         $period = $request->get('period', 'week');
+        $visitsPage = $request->get('visits_page', 1);
+        $limit = 10;
+
         $timingData = null;
+        $timingPaginator = null;
         $salesStats = null;
+        $visits = [];
+        $visitsPaginator = null;
 
         try {
             // Fetch Visit Timing
@@ -113,7 +125,24 @@ class EnvoyController extends Controller
             ]);
 
             if ($timingResponse->successful()) {
-                $timingData = $timingResponse->json()['data'];
+                $allTimingData = $timingResponse->json()['data'];
+                $timingVisits = $allTimingData['visits'] ?? [];
+                
+                $timingPage = $request->get('timing_page', 1);
+                $timingTotal = count($timingVisits);
+                $timingOffset = ($timingPage - 1) * $limit;
+                $pagedTiming = array_slice($timingVisits, $timingOffset, $limit);
+
+                $timingData = $allTimingData;
+                $timingData['visits'] = $pagedTiming;
+
+                $timingPaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $pagedTiming,
+                    $timingTotal,
+                    $limit,
+                    $timingPage,
+                    ['path' => route('admin.envoy.show', $user->id), 'query' => $request->query(), 'pageName' => 'timing_page']
+                );
             }
 
             // Fetch Sales Stats
@@ -127,25 +156,38 @@ class EnvoyController extends Controller
                 $salesStats = $salesResponse->json()['data'];
             }
 
-            // Fetch Visits List
+            // Fetch Visits List with Pagination
             $visitsResponse = Http::get('https://app.talentindustrial.com/plumber/inspection-visit/admin', [
                 'inspector_id' => $user->id,
-                'limit' => 50 // Fetch last 50 visits
+                'page' => $visitsPage,
+                'limit' => $limit
             ]);
 
             if ($visitsResponse->successful()) {
                 $visitsData = $visitsResponse->json();
                 $visits = $visitsData['visits'] ?? [];
-            } else {
-                $visits = [];
+                $pagination = $visitsData['pagination'] ?? null;
+
+                if ($pagination) {
+                    $visitsPaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                        $visits,
+                        $pagination['total'],
+                        $pagination['limit'],
+                        $pagination['page'],
+                        ['path' => route('admin.envoy.show', $user->id), 'query' => $request->query(), 'pageName' => 'visits_page']
+                    );
+                }
             }
+
+            // Fetch Envoy Awards
+            $awardsResponse = Http::get('https://app.talentindustrial.com/plumber/award/envoy/' . $user->id);
+            $envoyAwards = $awardsResponse->successful() ? $awardsResponse->json() : [];
 
         } catch (\Exception $e) {
             logger()->error('Failed to fetch envoy data: ' . $e->getMessage());
-            $visits = [];
         }
 
-        return view('admin.envoy.show', compact('user', 'timingData', 'salesStats', 'visits'));
+        return view('admin.envoy.show', compact('user', 'timingData', 'timingPaginator', 'salesStats', 'visits', 'visitsPaginator', 'envoyAwards'));
     }
 
     public function edit(User $user)
@@ -179,8 +221,14 @@ class EnvoyController extends Controller
         EnvoySetting::updateOrCreate(
             ['user_id' => $user->id],
             [
-                'weight' => $request->weight ?? 0,
-                'target' => $request->target ?? 0,
+                'weight_sales' => $request->weight_sales ?? 0,
+                'weight_visits' => $request->weight_visits ?? 0,
+                'weight_retention_rate' => $request->weight_retention_rate ?? 0,
+                'weight_conversion_rate' => $request->weight_conversion_rate ?? 0,
+                'target_sales' => $request->target_sales ?? 0,
+                'target_visits' => $request->target_visits ?? 0,
+                'target_retention_rate' => $request->target_retention_rate ?? 0,
+                'target_conversion_rate' => $request->target_conversion_rate ?? 0,
                 'salary' => $request->salary ?? 0,
                 'incentives' => $request->incentives ?? 0,
                 'region' => $request->region,

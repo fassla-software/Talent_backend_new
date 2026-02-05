@@ -279,3 +279,39 @@ export const createScheduledVisitValidation = [
   handleValidationErrors,
   strict,
 ];
+export const createAdminScheduledVisitValidation = [
+  body('inspector_id')
+    .notEmpty()
+    .withMessage('inspector_id is required')
+    .isInt()
+    .withMessage('inspector_id must be a number'),
+  body('scheduled_at')
+    .notEmpty()
+    .withMessage('scheduled_at is required')
+    .isISO8601()
+    .withMessage('scheduled_at must be a valid ISO8601 date'),
+  body('trader_id')
+    .optional()
+    .isInt()
+    .withMessage('trader_id must be a number'),
+  body('plumber_id')
+    .optional()
+    .isInt()
+    .withMessage('plumber_id must be a number'),
+  body('notes')
+    .optional()
+    .isString()
+    .withMessage('notes must be a string'),
+  body()
+    .custom((value, { req }) => {
+      if (!req.body.trader_id && !req.body.plumber_id) {
+        throw new Error('Either trader_id or plumber_id is required');
+      }
+      if (req.body.trader_id && req.body.plumber_id) {
+        throw new Error('Cannot provide both trader_id and plumber_id');
+      }
+      return true;
+    }),
+  handleValidationErrors,
+  strict,
+];

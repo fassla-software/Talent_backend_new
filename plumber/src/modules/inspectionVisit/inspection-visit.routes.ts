@@ -18,6 +18,7 @@ import {
   getReportByVisitIdHandler,
   updateVisitReportHandler,
   createScheduledVisitHandler,
+  createAdminScheduledVisitHandler,
 } from './inspection-visit.controller';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
 import { validateImages } from '../../middlewares/imageValidation.middleware';
@@ -30,6 +31,7 @@ import {
   getReportByVisitIdValidation,
   updateVisitReportValidation,
   createScheduledVisitValidation,
+  createAdminScheduledVisitValidation,
 } from './inspection-visit.validation';
 import { Roles } from '../role/role.model';
 
@@ -174,6 +176,12 @@ router.get(
 router.put(
   '/admin/:id/status',
   updateVisitStatusHandler,
+);
+
+router.post(
+  '/admin/schedule',
+  createAdminScheduledVisitValidation,
+  createAdminScheduledVisitHandler,
 );
 
 // Envoy Visit Timing (Open route for admin use)

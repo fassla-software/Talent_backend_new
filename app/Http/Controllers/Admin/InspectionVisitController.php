@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\User;
+use App\Models\Trader;
+use App\Models\Plumber;
 
 class InspectionVisitController extends Controller
 {
@@ -48,6 +51,52 @@ class InspectionVisitController extends Controller
             return back()->with('error', 'Failed to fetch inspection visits: ' . $response->body());
         } catch (\Exception $e) {
             return back()->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function create()
+    {
+        $envoys = User::role('envoy')->get();
+        $traders = Trader::with('user')->get();
+        $plumbers = Plumber::with('user')->get();
+
+        return view('admin.inspection-visits.create', compact('envoys', 'traders', 'plumbers'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'inspector_id' => 'required|exists:users,id',
+            'client_type' => 'required|in:trader,plumber',
+            'trader_id' => 'required_if:client_type,trader|nullable|exists:traders,id',
+            'plumber_id' => 'required_if:client_type,plumber|nullable|exists:plumbers,id',
+            'scheduled_at' => 'required|date|after:now',
+            'notes' => 'nullable|string'
+        ]);
+
+        try {
+            $data = [
+                'inspector_id' => $request->inspector_id,
+                'scheduled_at' => \Carbon\Carbon::parse($request->scheduled_at)->toIso8601String(),
+                'notes' => $request->notes
+            ];
+
+            if ($request->client_type == 'trader') {
+                $data['trader_id'] = (int)$request->trader_id;
+            } else {
+                $data['plumber_id'] = (int)$request->plumber_id;
+            }
+
+            $response = Http::post($this->apiBaseUrl . '/admin/schedule', $data);
+
+            if ($response->successful()) {
+                return redirect()->route('admin.inspectionVisit.index')->with('success', 'Visit scheduled successfully');
+            }
+
+            $error = $response->json()['message'] ?? 'Failed to schedule visit';
+            return back()->withInput()->with('error', $error);
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 

@@ -11,6 +11,7 @@ import InspectionRequestItem from '../inspectionRequest/inspection_request-items
 import { logStatusChange } from '../statusHistory/status-history.service';
 import { ClientType } from '../statusHistory/status-history.model';
 import { sendPushNotification } from '../../utils/notification';
+import { checkAndAssignTargetAwards } from '../award/award-automation.service';
 
 export interface ICheckInData {
   latitude: number;
@@ -354,6 +355,11 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     });
   }
 
+  // Trigger automatic award check
+  if (!is_draft) {
+    checkAndAssignTargetAwards(inspectorId).catch(err => console.error('Error in automated award check:', err));
+  }
+
   return {
     visit_id: visit.id,
     report_id: report.id,
@@ -484,7 +490,7 @@ export const getEnvoyVisits = async (inspectorId: number) => {
       {
         model: VisitReport,
         as: 'visitReport',
-        attributes: ['visit_result', 'company_name', 'sales_value'],
+        attributes: ['visit_result', 'company_name', 'sales_value', 'status'],
       },
     ],
     order: [['createdAt', 'DESC']],
@@ -502,6 +508,7 @@ export const getEnvoyVisits = async (inspectorId: number) => {
     visit_result: visit.visitReport?.visit_result || null,
     sales_value: visit.visitReport?.sales_value || 0,
     status: visit.status,
+    report_status: visit.visitReport?.status || null,
     scheduled_at: visit.scheduled_at,
     date: visit.createdAt,
 
@@ -694,6 +701,11 @@ export const updateVisitStatus = async (visitId: number, status: string) => {
   }
 
   await visit.update({ status });
+
+  // Trigger automatic award check if visit is approved
+  if (status === VisitStatus.APPROVED) {
+    checkAndAssignTargetAwards(visit.inspector_id).catch(err => console.error('Error in automated award check:', err));
+  }
 
   // Trigger notification
   const clientName = visit.trader?.user?.name || visit.plumber?.user?.name || 'Client';

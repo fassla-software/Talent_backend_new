@@ -125,6 +125,17 @@ class AwardController {
             res.status(500).json({ message: error.message });
         }
     }
+
+    // Get Awards by Envoy ID (for Admin)
+    async getAwardsByEnvoyId(req: Request, res: Response) {
+        try {
+            const envoyId = Number(req.params.envoyId);
+            const awards = await awardService.getAwardsByEnvoyId(envoyId);
+            res.json(awards);
+        } catch (error: any) {
+            res.status(500).json({ message: error.message });
+        }
+    }
 }
 
 export default new AwardController();
