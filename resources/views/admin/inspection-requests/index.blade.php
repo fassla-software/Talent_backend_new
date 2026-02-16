@@ -131,20 +131,22 @@ $statusTexts = [
         <tr>
             <td><input type="checkbox" class="rowCheckbox" value="{{ $request['id'] }}"></td>
             <td>{{ $request['id'] }}</td>
-            <td>{{ $request['requestor']['name'] ?? 'N/A' }}</td>
+            <td>
+                @if(isset($request['plumber_id']))
+                    <a href="{{ route('admin.plumberUsers.show', $request['plumber_id']) }}" class="text-decoration-none">
+                        {{ $request['requestor']['name'] ?? 'N/A' }}
+                    </a>
+                @else
+                    {{ $request['requestor']['name'] ?? 'N/A' }}
+                @endif
+            </td>
             <td>{{ $request['requestor']['phone'] ?? 'N/A' }}</td>
             <td>{{ $request['area'] }}</td>
             <td>{{ $request['city'] }}</td>
             <td>
                 <span class="badge 
-                        {{ $request['status'] === 'APPROVED' ? 'bg-success' : '' }}
-                        {{ $request['status'] === 'CANCELLED' ? 'bg-danger' : '' }}
-                        {{ $request['status'] === 'ASSIGNED' ? 'bg-warning' : '' }}
-                        {{ $request['status'] === 'REJECTED' ? 'bg-danger' : '' }}
-                        {{ $request['status'] === 'ACCEPTED' ? 'bg-success' : '' }}
-                        {{ $request['status'] === 'SEND' ? 'bg-info' : '' }}
-                        {{ $request['status'] === 'PENDING' ? 'bg-secondary' : '' }}
-                        text-white">
+                        {{ $request['status'] === 'APPROVED' ? 'bg-success' : ($request['status'] === 'CANCELLED' ? 'bg-danger' : ($request['status'] === 'ASSIGNED' ? 'bg-warning text-dark' : ($request['status'] === 'REJECTED' ? 'bg-danger' : ($request['status'] === 'ACCEPTED' ? 'bg-primary' : ($request['status'] === 'SEND' ? 'bg-info' : 'bg-secondary'))))) }}
+                        {{ !in_array($request['status'], ['ASSIGNED']) ? 'text-white' : '' }}">
                     {{ $statusTexts[$request['status']] ?? $request['status'] }}
                 </span>
             </td>
@@ -360,6 +362,41 @@ $statusTexts = [
     .lightbox-close:hover {
         color: #ff0000;
     }
+
+    /* Status Badge Styles */
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .bg-success {
+        background-color: #198754 !important;
+    }
+
+    .bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+    }
+
+    .bg-info {
+        background-color: #0dcaf0 !important;
+    }
+
+    .bg-primary {
+        background-color: #0d6efd !important;
+    }
+
+    .bg-secondary {
+        background-color: #6c757d !important;
+    }
 </style>
 
 <script>
@@ -384,7 +421,17 @@ $statusTexts = [
                     <div class="mb-3"><strong>ID:</strong> ${requestData.id}</div>
                     <div class="mb-3"><strong>User Name:</strong> ${requestData.user_name}</div>
                     <div class="mb-3"><strong>Status:</strong> 
-                        <span class="badge ${requestData.status === 'SEND' ? 'bg-success' : 'bg-warning'}">${requestData.status}</span>
+                        <span class="badge ${
+                            (requestData.status === 'SEND' ? 'bg-info' : 
+                            (requestData.status === 'PENDING' ? 'bg-secondary' :
+                            (requestData.status === 'ASSIGNED' ? 'bg-warning text-dark' :
+                            (requestData.status === 'ACCEPTED' ? 'bg-primary' :
+                            (requestData.status === 'APPROVED' ? 'bg-success' :
+                            (requestData.status === 'CANCELLED' ? 'bg-danger' :
+                            (requestData.status === 'REJECTED' ? 'bg-danger' : 'bg-secondary')))))))
+                        } ${
+                            requestData.status !== 'ASSIGNED' ? 'text-white' : ''
+                        }">${requestData.status}</span>
                     </div>
                 `;
                 assignDetailsContainer.innerHTML = detailsHTML;
@@ -525,13 +572,15 @@ $statusTexts = [
                     <div class="mb-3">
                         <strong>Status:</strong>
                         <span class="badge ${
-                            requestData.status === 'CANCELLED' ? 'bg-danger' :
-                            requestData.status === 'ASSIGNED' ? 'bg-warning' :
-                            requestData.status === 'APPROVED' ? 'bg-success' :
-                            requestData.status === 'PENDING' ? 'bg-secondary' :
-                            requestData.status === 'ACCEPTED' ? 'bg-success' :
-                            requestData.status === 'SEND' ? 'bg-info' :
-                            requestData.status === 'REJECTED' ? 'bg-danger' : 'bg-secondary'
+                            (requestData.status === 'CANCELLED' ? 'bg-danger' :
+                            (requestData.status === 'ASSIGNED' ? 'bg-warning text-dark' :
+                            (requestData.status === 'APPROVED' ? 'bg-success' :
+                            (requestData.status === 'PENDING' ? 'bg-secondary' :
+                            (requestData.status === 'ACCEPTED' ? 'bg-primary' :
+                            (requestData.status === 'SEND' ? 'bg-info' :
+                            (requestData.status === 'REJECTED' ? 'bg-danger' : 'bg-secondary')))))))
+                        } ${
+                            requestData.status !== 'ASSIGNED' ? 'text-white' : ''
                         }">
                             ${requestData.status}
                         </span>

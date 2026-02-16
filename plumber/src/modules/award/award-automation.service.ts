@@ -43,6 +43,13 @@ export const checkAndAssignTargetAwards = async (envoyId: number) => {
                 achievement: stats.conversion?.conversion_rate || 0,
                 target: stats.overview?.target_conversion_rate || 0,
                 perfKey: 'conversion'
+            },
+            {
+                key: 'inspection_requests',
+                title: 'Monthly Inspection Requests Target Met',
+                achievement: stats.overview?.approved_visits || 0,
+                target: stats.overview?.target_inspection_requests || 0,
+                perfKey: 'inspection_requests'
             }
         ];
 

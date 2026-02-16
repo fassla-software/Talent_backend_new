@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
+use App\Models\Plumber;
 use App\Models\AdminPlumberNotification;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
@@ -61,14 +62,21 @@ class InspectionRequestController extends Controller
         // Store only new "SEND" requests as notifications
         $this->storeNewRequestsAsNotifications($sendRequests);
 
-        // Create a map of envoy user IDs to their names
-        $envoyUserMap = $envoyUsers->pluck('name', 'id');
+        // Create a map of user IDs to plumber IDs
+    $plumberMap = Plumber::pluck('id', 'user_id');
 
-        // Map `assigned_envoy` for each request
-        $requests = $requests->map(function ($request) use ($envoyUserMap) {
-            $request['assigned_envoy'] = $envoyUserMap->get($request['inspector_id'], 'N/A');
-            return $request;
-        });
+    // Create a map of envoy user IDs to their names
+    $envoyUserMap = $envoyUsers->pluck('name', 'id');
+
+    // Map `assigned_envoy` and `plumber_id` for each request
+    $requests = $requests->map(function ($request) use ($envoyUserMap, $plumberMap) {
+        $request['assigned_envoy'] = $envoyUserMap->get($request['inspector_id'], 'N/A');
+        
+        // Inject plumber_id if the requestor is a plumber
+        $request['plumber_id'] = $plumberMap->get($request['requestor_id'] ?? ($request['requestor']['id'] ?? null));
+        
+        return $request;
+    });
 
         // Filtering logic (unchanged)
         $city = request()->get('city');

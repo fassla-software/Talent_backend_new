@@ -317,6 +317,7 @@ export const getOverviewStats = async (
         target_visits: envoySetting?.target_visits || 0,
         target_retention_rate: envoySetting?.target_retention_rate || 0,
         target_conversion_rate: envoySetting?.target_conversion_rate || 0,
+        target_inspection_requests: envoySetting?.target_inspection_requests || 0,
         envoySetting,
     };
 };
@@ -364,6 +365,12 @@ export const calculatePerformanceScore = (
             actual: stats.conversion.conversion_rate,
             target: settings.target_conversion_rate,
             weight: settings.weight_conversion_rate,
+        },
+        {
+            key: 'inspection_requests',
+            actual: stats.overview.approved_visits,
+            target: settings.target_inspection_requests * scalingFactor,
+            weight: settings.weight_inspection_requests,
         },
     ];
 
@@ -433,6 +440,18 @@ export const getEnvoyStatistics = async (
     const performance = calculatePerformanceScore(result, overview.envoySetting as any, periodType);
     result.performance_score = performance.score;
     result.performance_details = performance.metrics;
+
+    // Calculate earned incentives based on performance score
+    const baseIncentives = overview.envoySetting?.incentives || 0;
+    let earnedIncentives = 0;
+
+    if (performance.score >= 80) {
+        earnedIncentives = baseIncentives;
+    } else if (performance.score >= 60) {
+        earnedIncentives = baseIncentives * 0.5;
+    }
+
+    result.incentives = Number(earnedIncentives.toFixed(2));
 
     return result;
 };

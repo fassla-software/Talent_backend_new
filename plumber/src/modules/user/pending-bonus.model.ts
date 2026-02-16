@@ -24,6 +24,11 @@ PendingBonus.init(
       allowNull: false,
       defaultValue: 'PENDING',
     },
+    point_type: {
+      type: DataTypes.ENUM('fixed_points', 'instant_withdrawal'),
+      allowNull: false,
+      defaultValue: 'instant_withdrawal',
+    },
   },
   {
     sequelize,

@@ -15,6 +15,7 @@
 {{-- Summary --}}
 <div class="row">
     <x-dashboard-card icon="bi-person-circle" title="Total Plumbers" value="{{ $totalPlumbers }}" />
+    <x-dashboard-card icon="bi-person-plus-fill" title="New Plumbers" value="{{ $newPlumbers }}" />
     <x-dashboard-card icon="bi-clipboard-data" title="Total Inspections" value="{{ $totalInspections }}" />
     <x-dashboard-card icon="bi-patch-check-fill" title="Approved Inspections" value="{{ $approvedCount }}" />
     <x-dashboard-card icon="bi-person-badge-fill" title="Total Inspectors" value="{{ $totalInspectors }}" />
@@ -74,6 +75,34 @@
             <div class="card-body">
                 <h5 class="card-title">Inspections by City</h5>
                 <canvas id="cityChart"></canvas>
+            </div>
+        </div>
+    </div>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Approved Inspections by Envoy</h5>
+                <canvas id="envoyApprovedChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Plumbers by City</h5>
+                <canvas id="cityPlumbersChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Plumbers Registration Trend</h5>
+                <canvas id="plumbersTrendChart"></canvas>
             </div>
         </div>
     </div>
@@ -178,6 +207,60 @@
                 data: {!! json_encode($cityWiseInspections->values()) !!},
                 backgroundColor: '#0dcaf0'
             }]
+        }
+    });
+
+    const envoyApprovedChart = new Chart(document.getElementById('envoyApprovedChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($approvedInspectionsByEnvoy->keys()) !!},
+            datasets: [{
+                label: 'Approved Inspections',
+                data: {!! json_encode($approvedInspectionsByEnvoy->values()) !!},
+                backgroundColor: '#198754'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Approved Inspections by Envoy' }
+            }
+        }
+    });
+
+    const cityPlumbersChart = new Chart(document.getElementById('cityPlumbersChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($cityWisePlumbers->keys()) !!},
+            datasets: [{
+                label: 'Plumbers Count',
+                data: {!! json_encode($cityWisePlumbers->values()) !!},
+                backgroundColor: '#fd7e14'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Plumbers Distribution by City' }
+            }
+        }
+    });
+
+    const plumbersTrendChart = new Chart(document.getElementById('plumbersTrendChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($plumbersPerMonth->keys()) !!},
+            datasets: [{
+                label: 'New Plumbers',
+                data: {!! json_encode($plumbersPerMonth->values()) !!},
+                backgroundColor: '#6f42c1'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Plumbers Registration Trend' }
+            }
         }
     });
 </script>

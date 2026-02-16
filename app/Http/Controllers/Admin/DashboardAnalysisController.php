@@ -21,9 +21,14 @@ class DashboardAnalysisController extends Controller
 {
     public function index(Request $request)
     {
-        $from = $request->input('from') ?? Carbon::now()->startOfMonth()->toDateString();
-        $to = $request->input('to') ?? Carbon::now()->endOfMonth()->toDateString();
+        $from = $request->input('from') ?? Carbon::now()->startOfYear()->toDateString();
+        $to = $request->input('to') ?? Carbon::now()->endOfYear()->toDateString();
         $city = $request->input('city');
+        
+        $newPlumbers = Plumber::whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+            ->when($city, function($q) use ($city) {
+                return $q->where('city', $city);
+            })->count();
         
         // Debug: Log the filters
         Log::info('Dashboard Filters:', [
@@ -78,11 +83,50 @@ class DashboardAnalysisController extends Controller
 
 
         $cityWiseInspections = InspectionRequest::select('city', DB::raw('count(*) as total'))
+            ->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
             ->groupBy('city')->pluck('total', 'city');
 
 $totalPlumbers = Plumber::when($city, function($q) use ($city) {
     return $q->where('city', $city);
 })->count();
+
+$cityWisePlumbers = Plumber::select('city', DB::raw('count(*) as total'))
+    ->groupBy('city')
+    ->pluck('total', 'city');
+
+$plumbersData = Plumber::whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+    ->when($city, function($q) use ($city) {
+        return $q->where('city', $city);
+    })
+    ->select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('count(*) as total'))
+    ->groupBy('month')
+    ->orderBy('month')
+    ->pluck('total', 'month')
+    ->toArray();
+
+$plumbersPerMonth = collect();
+$startDate = Carbon::parse($from)->startOfMonth();
+$endDate = Carbon::parse($to)->startOfMonth();
+
+while ($startDate <= $endDate) {
+    $monthKey = $startDate->format('Y-m');
+    $plumbersPerMonth->put($monthKey, $plumbersData[$monthKey] ?? 0);
+    $startDate->addMonth();
+}
+
+$approvedInspectionsByEnvoy = InspectionRequest::where('status', 'APPROVED')
+    ->whereBetween('created_at', [$from . ' 00:00:00', $to . ' 23:59:59'])
+    ->when($city, function($q) use ($city) {
+        return $q->where('city', $city);
+    })
+    ->select('inspector_id', DB::raw('count(*) as total'))
+    ->groupBy('inspector_id')
+    ->get()
+    ->mapWithKeys(function ($item) {
+        $user = User::find($item->inspector_id);
+        $name = $user ? "{$user->name} {$user->last_name}" : 'Unknown';
+        return [$name => $item->total];
+    });
 $envoyRole = Role::where('name', 'envoy')->first();
 $envoyUserIds = $envoyRole ? $envoyRole->users()->pluck('id')->toArray() : [];
 $inspectorQuery = InspectionRequest::whereIn('inspector_id', $envoyUserIds)
@@ -184,7 +228,8 @@ $topInspectors = $inspectorQuery
             'cityWiseInspections', 'totalPlumbers', 'totalInspectors',
             'topInspectors', 'topPlumbers',
             'instantWithdrawalTotal', 'totalFixedPoints', 'totalGiftPoints',
-            'cities', 'totalProducts', 'mostRequestedProducts'
+            'cities', 'totalProducts', 'mostRequestedProducts',
+            'cityWisePlumbers', 'plumbersPerMonth', 'approvedInspectionsByEnvoy', 'newPlumbers'
         ));
     }
 }

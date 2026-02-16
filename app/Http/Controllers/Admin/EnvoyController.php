@@ -77,6 +77,17 @@ class EnvoyController extends Controller
         // Force role to envoy
         $request['role'] = 'envoy';
         
+        // Validate weights sum to 100
+        $totalWeight = ($request->weight_sales ?? 0) + 
+                       ($request->weight_visits ?? 0) + 
+                       ($request->weight_retention_rate ?? 0) + 
+                       ($request->weight_conversion_rate ?? 0) +
+                       ($request->weight_inspection_requests ?? 0);
+        
+        if ($totalWeight != 100) {
+            return back()->withErrors(['weights_sum' => 'The sum of all weight percentages must equal 100.'])->withInput();
+        }
+        
         $user = UserRepository::storeByRequest($request);
         $user->assignRole('envoy');
 
@@ -86,10 +97,12 @@ class EnvoyController extends Controller
             'weight_visits' => $request->weight_visits ?? 0,
             'weight_retention_rate' => $request->weight_retention_rate ?? 0,
             'weight_conversion_rate' => $request->weight_conversion_rate ?? 0,
+            'weight_inspection_requests' => $request->weight_inspection_requests ?? 0,
             'target_sales' => $request->target_sales ?? 0,
             'target_visits' => $request->target_visits ?? 0,
             'target_retention_rate' => $request->target_retention_rate ?? 0,
             'target_conversion_rate' => $request->target_conversion_rate ?? 0,
+            'target_inspection_requests' => $request->target_inspection_requests ?? 0,
             'salary' => $request->salary ?? 0,
             'incentives' => $request->incentives ?? 0,
             'region' => $request->region,
@@ -128,6 +141,36 @@ class EnvoyController extends Controller
                 $allTimingData = $timingResponse->json()['data'];
                 $timingVisits = $allTimingData['visits'] ?? [];
                 
+                // Calculate Total Visit Time and Time Between Visits
+                $totalVisitTime = 0;
+                $totalBetweenVisitsTime = 0;
+                
+                if (count($timingVisits) > 0) {
+                    // Sort visits by check-in time to calculate gaps
+                    usort($timingVisits, function($a, $b) {
+                        return strtotime($a['check_in_at']) <=> strtotime($b['check_in_at']);
+                    });
+                    
+                    foreach ($timingVisits as $index => $visit) {
+                        $duration = $visit['duration_minutes'] ?? 0;
+                        $totalVisitTime += $duration;
+                        
+                        // Calculate gap with next visit
+                        if (isset($timingVisits[$index + 1])) {
+                            $currentEnd = strtotime($visit['check_in_at']) + ($duration * 60);
+                            $nextStart = strtotime($timingVisits[$index + 1]['check_in_at']);
+                            
+                            $gap = ($nextStart - $currentEnd) / 60;
+                            if ($gap > 0) {
+                                $totalBetweenVisitsTime += $gap;
+                            }
+                        }
+                    }
+                }
+                
+                $allTimingData['total_visit_time_minutes'] = $totalVisitTime;
+                $allTimingData['total_between_visit_time_minutes'] = $totalBetweenVisitsTime;
+
                 $timingPage = $request->get('timing_page', 1);
                 $timingTotal = count($timingVisits);
                 $timingOffset = ($timingPage - 1) * $limit;
@@ -211,6 +254,17 @@ class EnvoyController extends Controller
             'email' => 'required|email|max:255',
             // Add other validations as needed
         ]);
+        
+        // Validate weights sum to 100
+        $totalWeight = ($request->weight_sales ?? 0) + 
+                       ($request->weight_visits ?? 0) + 
+                       ($request->weight_retention_rate ?? 0) + 
+                       ($request->weight_conversion_rate ?? 0) +
+                       ($request->weight_inspection_requests ?? 0);
+        
+        if ($totalWeight != 100) {
+            return back()->withErrors(['weights_sum' => 'The sum of all weight percentages must equal 100.'])->withInput();
+        }
 
         $user->update([
             'name' => $request->name,
@@ -225,10 +279,12 @@ class EnvoyController extends Controller
                 'weight_visits' => $request->weight_visits ?? 0,
                 'weight_retention_rate' => $request->weight_retention_rate ?? 0,
                 'weight_conversion_rate' => $request->weight_conversion_rate ?? 0,
+                'weight_inspection_requests' => $request->weight_inspection_requests ?? 0,
                 'target_sales' => $request->target_sales ?? 0,
                 'target_visits' => $request->target_visits ?? 0,
                 'target_retention_rate' => $request->target_retention_rate ?? 0,
                 'target_conversion_rate' => $request->target_conversion_rate ?? 0,
+                'target_inspection_requests' => $request->target_inspection_requests ?? 0,
                 'salary' => $request->salary ?? 0,
                 'incentives' => $request->incentives ?? 0,
                 'region' => $request->region,

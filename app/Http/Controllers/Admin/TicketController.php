@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\User;
+use App\Models\Trader;
+use App\Models\Plumber;
 
 class TicketController extends Controller
 {
@@ -36,6 +39,46 @@ class TicketController extends Controller
             return view('admin.tickets.index', compact('tickets', 'pagination'));
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to fetch tickets: ' . $e->getMessage());
+        }
+    }
+
+    public function create()
+    {
+        $envoys = User::role('envoy')->get();
+        $traders = Trader::with('user')->get();
+        $plumbers = Plumber::with('user')->get();
+
+        return view('admin.tickets.create', compact('envoys', 'traders', 'plumbers'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'inspector_id' => 'required|integer',
+            'client_phone' => 'required|string',
+            'title' => 'required|string|max:255',
+            'issue' => 'required|string',
+            'priority' => 'nullable|in:HIGH,AVERAGE,LOW',
+            'due_date' => 'nullable|date',
+        ]);
+
+        try {
+            $data = $request->only(['inspector_id', 'client_phone', 'title', 'issue', 'priority', 'due_date']);
+            
+            if ($request->filled('due_date')) {
+                $data['due_date'] = date('c', strtotime($request->due_date));
+            }
+
+            $response = Http::post($this->apiBaseUrl . '/admin', $data);
+
+            if ($response->successful()) {
+                return redirect()->route('admin.ticket.index')->with('success', 'Ticket created successfully');
+            }
+
+            $error = $response->json()['message'] ?? 'Failed to create ticket';
+            return back()->withInput()->with('error', $error);
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Failed to create ticket: ' . $e->getMessage());
         }
     }
 

@@ -273,6 +273,7 @@ export const registerPlumber = async (newPlumber: ICreatePlumber, role: Roles = 
       new_user_id: user.id,
       referrer_id: referrer ? referrer.id : null,
       points: bonusRule.points,
+      point_type: bonusRule.point_type,
     });
 
     console.log(
@@ -881,17 +882,19 @@ export const getPlumberList = async (search?: string) => {
 
 
 export const addReferralPoints = async (
-  points: number
+  points: number,
+  point_type: 'fixed_points' | 'instant_withdrawal' = 'instant_withdrawal'
 ): Promise<{ success: boolean; message?: string }> => {
   const existingConfig = await ReferralConfig.findOne();
 
   if (existingConfig) {
     existingConfig.referral_point = points;
+    existingConfig.point_type = point_type;
     await existingConfig.save();
     return { success: true };
   }
 
-  await ReferralConfig.create({ referral_point: points });
+  await ReferralConfig.create({ referral_point: points, point_type });
   return { success: true };
 };
 
@@ -902,15 +905,18 @@ export const pointsForRegestration = async ({
   start_date,
   end_date,
   points,
+  point_type,
 }: {
   start_date: Date;
   end_date: Date;
   points: number;
+  point_type: 'fixed_points' | 'instant_withdrawal';
 }): Promise<RegistrationBonusRule> => {
   const rule = await RegistrationBonusRule.create({
     start_date,
     end_date,
     points,
+    point_type,
   });
 
   return rule;

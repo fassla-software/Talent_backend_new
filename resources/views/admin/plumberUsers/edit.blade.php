@@ -45,6 +45,25 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
+                                    <label class="font-weight-bold">City</label>
+                                    <select id="city" class="form-control" name="city" required>
+                                        <option value="">اختر المدينة</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Area</label>
+                                    <select id="area" class="form-control" name="area" required disabled>
+                                        <option value="">اختر المنطقة</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
                                     <label class="font-weight-bold">Gift Points</label>
                                     <input type="number" min="0" name="gift_points" value="{{ $plumber->gift_points }}" class="form-control" required>
                                 </div>
@@ -88,3 +107,12 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('assets/js/city-areas.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initCityAreaDropdowns('city', 'area', '{{ $plumber->city ?? '' }}', '{{ $plumber->area ?? '' }}');
+    });
+</script>
+@endpush

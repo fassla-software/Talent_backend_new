@@ -21,6 +21,19 @@ class TicketController {
         res.status(201).json({ message: 'Ticket created successfully', ticket });
     }, 'Failed to create ticket');
 
+    createAdminTicket = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+        const inspector_id = parseInt(req.body.inspector_id);
+        const files = req.files as Express.Multer.File[];
+
+        const data = {
+            ...req.body,
+            files: files && files.length > 0 ? files.map(file => file.filename) : undefined,
+        };
+
+        const ticket = await ticketService.createTicket(data, inspector_id);
+        res.status(201).json({ message: 'Ticket created successfully', ticket });
+    }, 'Failed to create ticket as admin');
+
     getTickets = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
         const result = await ticketService.getAllTickets(req.query);
         res.status(200).json(result);

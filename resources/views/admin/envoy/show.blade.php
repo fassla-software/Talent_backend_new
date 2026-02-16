@@ -45,7 +45,7 @@
                         <hr>
                         <p><strong>{{ __('Salary') }}:</strong> {{ number_format($user->envoySetting->salary ?? 0, 2) }}</p>
                         <p><strong>{{ __('Incentives') }}:</strong> {{ number_format($user->envoySetting->incentives ?? 0, 2) }}</p>
-                        <p><strong>{{ __('Target') }}:</strong> {{ number_format($user->envoySetting->target ?? 0, 2) }}</p>
+                        <p><strong>{{ __('Target Sales') }}:</strong> {{ number_format($user->envoySetting->target_sales ?? 0, 2) }}</p>
 {{-- <p><strong>{{ __('Weight') }}:</strong> {{ $user->envoySetting->weight ?? 0 }}</p> --}}
                     </div>
                 </div>
@@ -255,7 +255,25 @@
                             </form>
                         </div>
                         <div class="card-body">
-                            @if ($timingData && count($timingData['visits']) > 0)
+                            @if ($timingData && count($timingData['visits'] ?? []) > 0)
+                                <div class="row text-center mb-3">
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 bg-light">
+                                            <h6 class="text-muted mb-1" style="font-size: 0.8rem;">{{ __('Total Visit Time') }}</h6>
+                                            <h5 class="mb-0 text-success">
+                                                {{ floor($timingData['total_visit_time_minutes'] / 60) }}h {{ $timingData['total_visit_time_minutes'] % 60 }}m
+                                            </h5>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 bg-light">
+                                            <h6 class="text-muted mb-1" style="font-size: 0.8rem;">{{ __('Total Between Visits') }}</h6>
+                                            <h5 class="mb-0 text-primary">
+                                                {{ floor($timingData['total_between_visit_time_minutes'] / 60) }}h {{ floor($timingData['total_between_visit_time_minutes'] % 60) }}m
+                                            </h5>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered">
                                         <thead>
@@ -340,7 +358,7 @@
             </div>
 
             <!-- Awards & Recognition Section -->
-            <div class="card mt-4">
+            <div class="card mt-4 mb-4">
                 <div class="card-header bg-warning-subtle">
                     <h6 class="mb-0"><i class="fa-solid fa-award me-1"></i> {{ __('Awards & Recognition') }}</h6>
                 </div>
@@ -363,7 +381,6 @@
                         <p class="text-center text-muted py-4 m-0">{{ __('No awards received yet.') }}</p>
                     @endif
                 </div>
-            </div>
         </div>
     </div>
 </div>

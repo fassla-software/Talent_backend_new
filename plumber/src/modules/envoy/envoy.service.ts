@@ -144,6 +144,7 @@ export const registerUserByEnvoy = async (
             new_user_id: user.id,
             referrer_id: referrer ? referrer.id : null,
             points: bonusRule.points,
+            point_type: bonusRule.point_type,
         });
 
         console.log(

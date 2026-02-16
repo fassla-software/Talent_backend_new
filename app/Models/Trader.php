@@ -85,13 +85,18 @@ class Trader extends Model
         $totalCoupons = $this->getTotalCouponsCount();
 
         // Find the level where total sales falls within min_sales and max_sales
-        // If total sales exceeds all levels, return the highest level
         $level = \App\Models\Level::where('min_sales', '<=', $totalCoupons)
             ->where('max_sales', '>=', $totalCoupons)
             ->first();
 
         if (!$level) {
-            // If no level matches, check if total sales exceeds the highest level
+            // Check if total sales is below the first level's minimum
+            $firstLevel = \App\Models\Level::orderBy('min_sales', 'asc')->first();
+            if ($firstLevel && $totalCoupons < $firstLevel->min_sales) {
+                return $firstLevel;
+            }
+
+            // Check if total sales exceeds the highest level
             $highestLevel = \App\Models\Level::orderBy('max_sales', 'desc')->first();
             if ($highestLevel && $totalCoupons > $highestLevel->max_sales) {
                 return $highestLevel;

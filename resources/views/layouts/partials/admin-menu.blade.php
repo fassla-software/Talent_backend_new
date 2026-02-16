@@ -24,6 +24,15 @@
         </span>
     </a>
 </li>
+<li>
+    <a class="menu {{ request()->routeIs('admin.users-information.index') ? 'active' : '' }}"
+        href="{{ route('admin.users-information.index') }}">
+        <span>
+            <i class="fa-solid fa-users-viewfinder menu-icon"></i>
+            {{ __('Users Information') }}
+        </span>
+    </a>
+</li>
 @endif
 
 
@@ -622,6 +631,15 @@
         <span>
             <i class="fa-solid fa-house menu-icon"></i>
             {{ __('Dashboard') }}
+        </span>
+    </a>
+</li>
+<li>
+    <a class="menu {{ request()->routeIs('admin.users-information.index') ? 'active' : '' }}"
+        href="{{ route('admin.users-information.index') }}">
+        <span>
+            <i class="fa-solid fa-users-viewfinder menu-icon"></i>
+            {{ __('Users Information') }}
         </span>
     </a>
 </li>

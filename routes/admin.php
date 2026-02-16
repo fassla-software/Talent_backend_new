@@ -518,6 +518,8 @@ Route::name('admin.')->group(function () {
         // Tickets routes
         Route::controller(TicketController::class)->group(function () {
             Route::get('/tickets', 'index')->name('ticket.index');
+            Route::get('/tickets/create', 'create')->name('ticket.create');
+            Route::post('/tickets', 'store')->name('ticket.store');
             Route::put('/tickets/{id}', 'update')->name('ticket.update');
             Route::get('/tickets/{id}', 'show')->name('ticket.show');
             Route::delete('/tickets/{id}', 'destroy')->name('ticket.destroy');

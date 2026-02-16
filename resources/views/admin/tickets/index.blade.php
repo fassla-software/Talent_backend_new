@@ -2,6 +2,9 @@
 @section('content')
     <div class="d-flex align-items-center flex-wrap gap-3 justify-content-between px-3">
         <h4>{{ __('Tickets Management') }}</h4>
+        <a href="{{ route('admin.ticket.create') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> {{ __('Create Ticket') }}
+        </a>
     </div>
 
     <div class="container-fluid mt-3">

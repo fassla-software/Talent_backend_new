@@ -20,6 +20,20 @@ export const createTicketValidation = [
     strict,
 ];
 
+export const createAdminTicketValidation = [
+    body('client_phone').isString().notEmpty().withMessage('Client phone is required'),
+    body('inspector_id').isInt().withMessage('Inspector ID is required and must be an integer'),
+    body('title').isString().notEmpty().withMessage('Title is required'),
+    body('issue').isString().notEmpty().withMessage('Issue description is required'),
+    body('priority')
+        .optional()
+        .isIn(Object.values(TicketPriority))
+        .withMessage(`Priority must be one of: ${Object.values(TicketPriority).join(', ')}`),
+    body('due_date').optional().isISO8601().toDate().withMessage('Due date must be a valid date'),
+    handleValidationErrors,
+    strict,
+];
+
 export const updateTicketValidation = [
     body('status')
         .optional()

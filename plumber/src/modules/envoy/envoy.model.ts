@@ -9,10 +9,12 @@ class EnvoySetting extends Model {
     public weight_visits!: number;
     public weight_retention_rate!: number;
     public weight_conversion_rate!: number;
+    public weight_inspection_requests!: number;
     public target_sales!: number;
     public target_visits!: number;
     public target_retention_rate!: number;
     public target_conversion_rate!: number;
+    public target_inspection_requests!: number;
     public salary!: number;
     public incentives!: number;
     public region!: string | null;
@@ -53,6 +55,10 @@ EnvoySetting.init(
             type: DataTypes.INTEGER,
             defaultValue: 0,
         },
+        weight_inspection_requests: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
         target_sales: {
             type: DataTypes.INTEGER,
             defaultValue: 0,
@@ -67,6 +73,10 @@ EnvoySetting.init(
         },
         target_conversion_rate: {
             type: DataTypes.FLOAT,
+            defaultValue: 0,
+        },
+        target_inspection_requests: {
+            type: DataTypes.INTEGER,
             defaultValue: 0,
         },
         salary: {

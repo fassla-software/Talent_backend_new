@@ -55,6 +55,7 @@ use App\Http\Controllers\Admin\DashboardAnalysisController;
 
 
 use App\Http\Controllers\Admin\LevelController;
+use App\Http\Controllers\Admin\UnifiedUserController;
 
 Route::delete('/registration_bonus/{id}', function ($id) {
     DB::table('registration_bonus')->where('id', $id)->delete();
@@ -71,6 +72,9 @@ Route::delete('/registration_bonus/{id}', function ($id) {
             Route::put('/level/{level}/update', 'update')->name('level.update');
             Route::delete('/level/{level}/destroy', 'destroy')->name('level.destroy');
         });
+
+
+Route::get('/admin/users-information', [UnifiedUserController::class, 'index'])->name('admin.users-information.index');
 
 Route::get('/admin/analysis', [DashboardAnalysisController::class, 'index'])->name('dashboard.analysis');
 

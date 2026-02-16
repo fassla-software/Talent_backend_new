@@ -56,7 +56,9 @@
                         <div class="form-group row mb-3">
                             <label for="city" class="col-md-4 col-form-label text-md-right">{{ __('City') }}</label>
                             <div class="col-md-6">
-                                <input id="city" type="text" class="form-control @error('city') is-invalid @enderror" name="city" value="{{ old('city') }}" required>
+                                <select id="city" class="form-control @error('city') is-invalid @enderror" name="city" required>
+                                    <option value="">اختر المدينة</option>
+                                </select>
                                 @error('city')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -68,7 +70,9 @@
                         <div class="form-group row mb-3">
                             <label for="area" class="col-md-4 col-form-label text-md-right">{{ __('Area') }}</label>
                             <div class="col-md-6">
-                                <input id="area" type="text" class="form-control @error('area') is-invalid @enderror" name="area" value="{{ old('area') }}" required>
+                                <select id="area" class="form-control @error('area') is-invalid @enderror" name="area" required disabled>
+                                    <option value="">اختر المنطقة</option>
+                                </select>
                                 @error('area')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -149,3 +153,12 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('assets/js/city-areas.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initCityAreaDropdowns('city', 'area', '{{ old('city') }}', '{{ old('area') }}');
+    });
+</script>
+@endpush

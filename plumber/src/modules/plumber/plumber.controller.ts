@@ -274,9 +274,9 @@ export const getPlumberReportHandler = asyncHandler(async (req: AuthenticatedReq
 }, 'Failed to get plumbers info');
 
 export const addReferralPointsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { points } = req.body;
+  const { points, point_type } = req.body;
 
-  const result = await addReferralPoints(Number(points));
+  const result = await addReferralPoints(Number(points), point_type);
 
   if (!result.success) {
     return res.status(400).json({ message: result.message });
@@ -287,9 +287,9 @@ export const addReferralPointsHandler = asyncHandler(async (req: AuthenticatedRe
 
 
 export const pointsForRegestrationHandler = asyncHandler(async (req: Request, res: Response) => {
-  const { start_date, end_date, points } = req.body;
+  const { start_date, end_date, points, point_type } = req.body;
 
-  const result = await pointsForRegestration({ start_date, end_date, points });
+  const result = await pointsForRegestration({ start_date, end_date, points, point_type });
 
   res.status(201).json({
     success: true,

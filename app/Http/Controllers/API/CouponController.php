@@ -219,13 +219,19 @@ class CouponController extends Controller
                 'level' => $level->level,
                 'min_coupon' => $level->min_sales,
                 'max_coupon' => $level->max_sales,
+                'level_value' => $level->points,
             ];
         });
 
+        $couponCount = $trader->usedCoupons()->count();
+        $currentLevelPoints = $currentLevel ? $currentLevel->points : 0;
+
         return response()->json([
             'success' => true,
-            'coupons' => $trader->usedCoupons()->count(),
+            'coupons' => $couponCount,
             'current_level' => $currentLevel ? $currentLevel->level : null,
+            'current_level_points' => $currentLevelPoints,
+            'level_total_value' => $couponCount * $currentLevelPoints,
             'levels' => $levels,
         ], 200);
     }

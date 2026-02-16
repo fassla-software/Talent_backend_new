@@ -51,7 +51,12 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="region" class="form-label">{{ __('Region') }}</label>
-                        <input type="text" name="region" id="region" class="form-control @error('region') is-invalid @enderror" value="{{ old('region') }}">
+                        <select name="region" id="region" class="form-control @error('region') is-invalid @enderror">
+                            <option value="">{{ __('Select Region') }}</option>
+                            @foreach(['القاهرة', 'الجيزة', 'القليوبية', 'البحيرة', 'دمياط', 'الدقهلية', 'كفر الشيخ', 'الغربية', 'المنوفية', 'الشرقية', 'بورسعيد', 'الإسماعيلية', 'بني سويف', 'الفيوم', 'المنيا', 'أسيوط', 'سوهاج', 'قنا'] as $city)
+                                <option value="{{ $city }}" {{ old('region') == $city ? 'selected' : '' }}>{{ $city }}</option>
+                            @endforeach
+                        </select>
                         @error('region') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
@@ -71,7 +76,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="weight_sales" class="form-label">{{ __('Weight Sales (%)') }}</label>
-                        <input type="number" name="weight_sales" id="weight_sales" class="form-control @error('weight_sales') is-invalid @enderror" value="{{ old('weight_sales', 0) }}">
+                        <input type="number" name="weight_sales" id="weight_sales" class="form-control weight-input @error('weight_sales') is-invalid @enderror" value="{{ old('weight_sales', 0) }}">
                         @error('weight_sales') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
@@ -83,7 +88,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="weight_visits" class="form-label">{{ __('Weight Visits (%)') }}</label>
-                        <input type="number" name="weight_visits" id="weight_visits" class="form-control @error('weight_visits') is-invalid @enderror" value="{{ old('weight_visits', 0) }}">
+                        <input type="number" name="weight_visits" id="weight_visits" class="form-control weight-input @error('weight_visits') is-invalid @enderror" value="{{ old('weight_visits', 0) }}">
                         @error('weight_visits') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
@@ -95,7 +100,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="weight_retention_rate" class="form-label">{{ __('Weight Retention (%)') }}</label>
-                        <input type="number" name="weight_retention_rate" id="weight_retention_rate" class="form-control @error('weight_retention_rate') is-invalid @enderror" value="{{ old('weight_retention_rate', 0) }}">
+                        <input type="number" name="weight_retention_rate" id="weight_retention_rate" class="form-control weight-input @error('weight_retention_rate') is-invalid @enderror" value="{{ old('weight_retention_rate', 0) }}">
                         @error('weight_retention_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
@@ -107,8 +112,29 @@
 
                     <div class="col-md-6 mb-3">
                         <label for="weight_conversion_rate" class="form-label">{{ __('Weight Conversion (%)') }}</label>
-                        <input type="number" name="weight_conversion_rate" id="weight_conversion_rate" class="form-control @error('weight_conversion_rate') is-invalid @enderror" value="{{ old('weight_conversion_rate', 0) }}">
+                        <input type="number" name="weight_conversion_rate" id="weight_conversion_rate" class="form-control weight-input @error('weight_conversion_rate') is-invalid @enderror" value="{{ old('weight_conversion_rate', 0) }}">
                         @error('weight_conversion_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="target_inspection_requests" class="form-label">{{ __('Target Inspection Requests') }}</label>
+                        <input type="number" name="target_inspection_requests" id="target_inspection_requests" class="form-control @error('target_inspection_requests') is-invalid @enderror" value="{{ old('target_inspection_requests', 0) }}">
+                        @error('target_inspection_requests') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="weight_inspection_requests" class="form-label">{{ __('Weight Inspection Requests (%)') }}</label>
+                        <input type="number" name="weight_inspection_requests" id="weight_inspection_requests" class="form-control weight-input @error('weight_inspection_requests') is-invalid @enderror" value="{{ old('weight_inspection_requests', 0) }}">
+                        @error('weight_inspection_requests') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <div id="weight-sum-alert" class="alert alert-info py-2">
+                            {{ __('Total Weight: ') }} <span id="weight-total">0</span>%
+                        </div>
+                        @if($errors->has('weights_sum'))
+                            <div class="text-danger small mt-1">{{ $errors->first('weights_sum') }}</div>
+                        @endif
                     </div>
 
                     <div class="col-md-6 mb-3">
@@ -130,4 +156,36 @@
             </form>
         </div>
     </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const weightInputs = document.querySelectorAll('.weight-input');
+        const weightTotal = document.getElementById('weight-total');
+        const alertBox = document.getElementById('weight-sum-alert');
+
+        function calculateSum() {
+            let sum = 0;
+            weightInputs.forEach(input => {
+                sum += parseInt(input.value) || 0;
+            });
+            weightTotal.textContent = sum;
+            
+            if (sum === 100) {
+                alertBox.className = 'alert alert-success py-2';
+            } else {
+                alertBox.className = 'alert alert-warning py-2';
+            }
+        }
+
+        weightInputs.forEach(input => {
+            input.addEventListener('input', calculateSum);
+        });
+
+        calculateSum();
+    });
+</script>
+@endpush
 @endsection
