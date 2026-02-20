@@ -23,6 +23,7 @@ import {
   getPlumberList,
   addReferralPoints,
   pointsForRegestration,
+  searchTradersInCity,
   getUserByPhoneAndRole
 } from './plumber.service';
 import { generateOtp } from '../../utils/otp.utils';
@@ -473,3 +474,15 @@ export const downloadPlumberReportHandler = asyncHandler(async (req: Request, re
     fs.unlinkSync(filePath);
   });
 }, 'failed to get user data');
+
+export const searchTradersHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { name, phone } = req.query;
+  const userId = req.user!.id;
+
+  const nameStr = typeof name === 'string' ? name : undefined;
+  const phoneStr = typeof phone === 'string' ? phone : undefined;
+
+  const result = await searchTradersInCity(Number(userId), nameStr, phoneStr);
+  res.status(200).json(result);
+}, 'Failed to search traders');
+

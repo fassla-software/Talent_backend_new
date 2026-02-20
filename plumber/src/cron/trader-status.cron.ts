@@ -4,6 +4,7 @@ import Trader, { TraderActivityStatus } from '../modules/trader/trader.model';
 import Plumber, { PlumberAccountStatus } from '../modules/plumber/plumber.model';
 import InspectionVisit from '../modules/inspectionVisit/inspection-visit.model';
 import VisitReport from '../modules/inspectionVisit/visit-report.model';
+import InspectionRequest from '../modules/inspectionRequest/inspection_request.model';
 import { logStatusChange } from '../modules/statusHistory/status-history.service';
 import { ClientType } from '../modules/statusHistory/status-history.model';
 
@@ -111,6 +112,16 @@ export const initTraderStatusCron = () => {
 
                 if (lastVisit) {
                     lastActivityDate = lastVisit.createdAt;
+                }
+
+                // Also check for the last inspection request (only for plumbers)
+                const lastRequest = await InspectionRequest.findOne({
+                    where: { requestor_id: plumber.user_id },
+                    order: [['createdAt', 'DESC']],
+                });
+
+                if (lastRequest && lastRequest.createdAt > lastActivityDate) {
+                    lastActivityDate = lastRequest.createdAt;
                 }
 
                 const now = new Date();

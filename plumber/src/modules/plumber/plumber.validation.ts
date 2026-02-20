@@ -1,4 +1,4 @@
-import { body, param } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import { strict, handleValidationErrors } from '../../utils/base.validators';
 
 export const registerValidator = [
@@ -130,4 +130,9 @@ export const paramsValidator = [
   strict,
 ];
 
-
+export const searchTradersValidation = [
+  query('name').optional().isString().withMessage('Name must be a string'),
+  query('phone').optional().isString().withMessage('Phone must be a string'),
+  handleValidationErrors,
+  strict,
+];

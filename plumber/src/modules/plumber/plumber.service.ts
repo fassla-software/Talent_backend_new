@@ -952,3 +952,53 @@ export const refreshToken = async (userId: string, role: string) => {
   return { token, user: { ...user.toJSON(), role } };
 };
 
+export const searchTradersInCity = async (userId: number, name?: string, phone?: string) => {
+  const plumber = await Plumber.findOne({ where: { user_id: userId } });
+  if (!plumber) {
+    throw new HttpError('Plumber not found', 404);
+  }
+
+  const city = plumber.city;
+  const whereConditions: any = { city };
+
+  if (name || phone) {
+    const userConditions: any[] = [];
+    if (name) {
+      userConditions.push({ '$user.name$': { [Op.like]: `%${name}%` } });
+    }
+    if (phone) {
+      userConditions.push({ '$user.phone$': { [Op.like]: `%${phone}%` } });
+    }
+    if (userConditions.length > 0) {
+      whereConditions[Op.or] = userConditions;
+    }
+  }
+
+  const tradersResult = await Trader.findAndCountAll({
+    where: whereConditions,
+    include: [
+      {
+        model: User,
+        as: 'user',
+        required: true,
+        attributes: ['id', 'name', 'phone'],
+      },
+    ],
+  });
+
+  const traders = tradersResult.rows.map(trader => {
+    const traderData = trader.toJSON();
+    return {
+      ...traderData,
+      role: 'trader',
+      image: traderData.image ? (viewImages(traderData.image) as string) : '',
+    };
+  });
+
+  return {
+    total: tradersResult.count,
+    results: traders,
+  };
+};
+
+

@@ -68,7 +68,7 @@ export const updateProfileHandler = asyncHandler(async (req: Request, res: Respo
 }, 'Failed to update profile');
 
 export const searchTradersHandler = asyncHandler(async (req: any, res: Response) => {
-    const { name, phone } = req.query;
+    const { name, phone, role } = req.query;
 
     let city: string | undefined;
 
@@ -81,7 +81,8 @@ export const searchTradersHandler = asyncHandler(async (req: any, res: Response)
 
     const nameStr = typeof name === 'string' ? name : undefined;
     const phoneStr = typeof phone === 'string' ? phone : undefined;
+    const roleStr = typeof role === 'string' ? role : undefined;
 
-    const result = await searchTraders(nameStr, phoneStr, city);
+    const result = await searchTraders(nameStr, phoneStr, city, roleStr);
     res.status(200).json(result);
 }, 'Failed to search traders');

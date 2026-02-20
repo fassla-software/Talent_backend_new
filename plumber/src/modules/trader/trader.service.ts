@@ -199,7 +199,7 @@ export const updateProfile = async (token: string, newTrader: IUpdatePlumber) =>
     return await updateTrader(userId, newTrader);
 };
 
-export const searchTraders = async (name?: string, phone?: string, city?: string) => {
+export const searchTraders = async (name?: string, phone?: string, city?: string, role?: string) => {
     const whereConditions: any = {};
 
     if (city) {
@@ -224,27 +224,34 @@ export const searchTraders = async (name?: string, phone?: string, city?: string
         }
     }
 
+    const searchTraders = !role || role === 'trader';
+    const searchPlumbers = !role || role === 'plumber';
+
     const [tradersResult, plumbersResult] = await Promise.all([
-        Trader.findAndCountAll({
-            where: whereConditions,
-            include: [
-                {
-                    model: User,
-                    as: 'user',
-                    required: true,
-                },
-            ],
-        }),
-        Plumber.findAndCountAll({
-            where: whereConditions,
-            include: [
-                {
-                    model: User,
-                    as: 'user',
-                    required: true,
-                },
-            ],
-        }),
+        searchTraders
+            ? Trader.findAndCountAll({
+                where: whereConditions,
+                include: [
+                    {
+                        model: User,
+                        as: 'user',
+                        required: true,
+                    },
+                ],
+            })
+            : Promise.resolve({ rows: [], count: 0 }),
+        searchPlumbers
+            ? Plumber.findAndCountAll({
+                where: whereConditions,
+                include: [
+                    {
+                        model: User,
+                        as: 'user',
+                        required: true,
+                    },
+                ],
+            })
+            : Promise.resolve({ rows: [], count: 0 }),
     ]);
 
     const traders = tradersResult.rows.map((trader) => {

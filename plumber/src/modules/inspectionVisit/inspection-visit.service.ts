@@ -230,8 +230,8 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     companyName = trader.user.name; // Use user name as company name
     customerNationalityId = trader.nationality_id || ''; // Get from trader, not user
 
-    // Update trader status if sales_value is present
-    if (visitData.sales_value && trader.status !== TraderActivityStatus.ACTIVE) {
+    // Update trader status if sales_value is present and > 0
+    if (visitData.sales_value && visitData.sales_value > 0 && trader.status !== TraderActivityStatus.ACTIVE) {
       const oldStatus = trader.status;
       await trader.update({ status: TraderActivityStatus.ACTIVE });
 
@@ -270,8 +270,8 @@ export const submitVisitReport = async (inspectorId: number, data: ISubmitVisitR
     companyName = plumber.user.name; // Use user name as company name
     customerNationalityId = plumber.nationality_id || ''; // Get from plumber, not user
 
-    // Update plumber status if sales_value is present
-    if (visitData.sales_value && plumber.status !== PlumberAccountStatus.ACTIVE) {
+    // Update plumber status if sales_value is present and > 0
+    if (visitData.sales_value && visitData.sales_value > 0 && plumber.status !== PlumberAccountStatus.ACTIVE) {
       const oldStatus = plumber.status;
       await plumber.update({ status: PlumberAccountStatus.ACTIVE });
 

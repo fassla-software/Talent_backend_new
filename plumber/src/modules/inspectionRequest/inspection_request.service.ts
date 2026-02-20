@@ -11,7 +11,9 @@ import InspectionRequest, { RequestStatus } from './inspection_request.model';
 import { getConfig } from 'dotenv-handler';
 import { createCertificatePDF } from '../certificate/certificate.service';
 import { calcUserPoints, getAllParents, haversineDistance } from './inspect-request.utils';
-import Plumber from '../plumber/plumber.model';
+import Plumber, { PlumberAccountStatus } from '../plumber/plumber.model';
+import { logStatusChange } from '../statusHistory/status-history.service';
+import { ClientType } from '../statusHistory/status-history.model';
 import { Sequelize } from 'sequelize';
 import { Op } from 'sequelize';
 import User from '../user/user.model';
@@ -89,6 +91,17 @@ export const addInspectionRequest = async (
   }));
 
   await InspectionRequestItem.bulkCreate(itemsData);
+
+  // Update plumber status to ACTIVE if not already
+  const targetPlumberUserId = isEnvoy ? plumber_id : requestor_id;
+  if (targetPlumberUserId) {
+    const plumber = await Plumber.findOne({ where: { user_id: targetPlumberUserId } });
+    if (plumber && plumber.status !== PlumberAccountStatus.ACTIVE) {
+      const oldStatus = plumber.status;
+      await plumber.update({ status: PlumberAccountStatus.ACTIVE });
+      await logStatusChange(plumber.id, ClientType.PLUMBER, oldStatus, PlumberAccountStatus.ACTIVE);
+    }
+  }
 
   return request;
 };
@@ -533,7 +546,6 @@ export const approveInspectionRequest = async (data: {
     address: request.address,
     date: request.inspection_date.toISOString().split('T')[0],
     url: `${BASE_URL}/PDF/${request.user_name}_${request.certificate_id}`,
-    description: request.description || '',
   });
 
   const fileName = path.basename(fileUrl);

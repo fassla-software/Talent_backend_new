@@ -25,9 +25,9 @@ import {
   addReferralPointsHandler,
   pointsForRegestrationHandler,
   refreshTokenHandler,
-
+  searchTradersHandler,
 } from './plumber.controller';
-import { checkPhoneUnique ,checkReferralCode } from './plumber.middleware';
+import { checkPhoneUnique, checkReferralCode } from './plumber.middleware';
 import upload from '../../middlewares/upload.middleware';
 import { authenticate, verifyShortLiveToken } from '../../middlewares/auth.middleware';
 import {
@@ -41,6 +41,7 @@ import {
   updatedPlumberValidator,
   validatePhoneOtpValidator,
   verifyValidator,
+  searchTradersValidation,
 } from './plumber.validation';
 
 
@@ -53,7 +54,8 @@ router.post('/refresh-token', refreshTokenHandler);
 
 
 
-router.get('/getPlumberList',authenticate,getPlumberListHandler);
+router.get('/getPlumberList', authenticate, getPlumberListHandler);
+router.get('/search', authenticate, searchTradersValidation, searchTradersHandler);
 router.put(
   '/complete-register',
   authenticate,
@@ -90,8 +92,8 @@ router.put('/newpassword', verifyShortLiveToken, newPasswordValidator, updateUse
 // dashboard
 router.put('/:id/accept', paramsValidator, acceptPlumberHandler);
 router.put('/:id/reject', paramsValidator, rejectPlumberHandler);
-router.post('/addReferralPoints',  addReferralPointsHandler);
-router.post('/pointsForRegestration',  pointsForRegestrationHandler);
+router.post('/addReferralPoints', addReferralPointsHandler);
+router.post('/pointsForRegestration', pointsForRegestrationHandler);
 
 
 export default router;

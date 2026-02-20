@@ -53,6 +53,7 @@ use App\Http\Controllers\Admin\InspectionVisitController;
 use App\Http\Controllers\Admin\InspectionRequestController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\AwardController;
+use App\Http\Controllers\Admin\SalesVisitsStatsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +72,7 @@ Route::name('admin.')->group(function () {
     Route::middleware(['auth', 'checkPermission'])->group(function () {
         // Dashboard
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
+        Route::get('/sales-visits-stats', [SalesVisitsStatsController::class, 'index'])->name('sales-visits-stats.index');
     
             //level 
         Route::controller(LevelController::class)->group(function () {

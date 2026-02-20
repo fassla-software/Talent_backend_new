@@ -10,6 +10,7 @@ export const paramsValidator = [
 export const searchValidation = [
     query('name').optional().isString().withMessage('Name must be a string'),
     query('phone').optional().isString().withMessage('Phone must be a string'),
+    query('role').optional().isString().withMessage('Role must be a string'),
     handleValidationErrors,
     strict,
 ];

@@ -501,6 +501,16 @@
 </li>
 
 <li>
+    <a class="menu {{ $request->routeIs('admin.sales-visits-stats.index') ? 'active' : '' }}"
+        href="{{ route('admin.sales-visits-stats.index') }}">
+        <span>
+            <i class="fa-solid fa-chart-line menu-icon"></i>
+            {{ __('Sales Visits Stats') }}
+        </span>
+    </a>
+</li>
+
+<li>
     <a class="menu {{ $request->routeIs('admin.ticket.*') ? 'active' : '' }}"
         href="{{ route('admin.ticket.index') }}">
         <span>

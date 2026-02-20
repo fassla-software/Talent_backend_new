@@ -194,7 +194,11 @@
                             </td>
                             <td>{{ $user['phone'] }}</td>
                             <td>
-                                <span class="text-{{ strtolower($user['status']) == 'approved' || strtolower($user['status']) == 'active' ? 'success' : (strtolower($user['status']) == 'pending' ? 'warning' : 'danger') }}">
+                                <span class="text-{{ 
+                                    in_array(strtolower($user['status']), ['approved', 'active']) ? 'success' : 
+                                    (strtolower($user['status']) == 'pending' ? 'warning' : 
+                                    (strtolower($user['status']) == 'dormant' ? 'info' : 'danger')) 
+                                }}">
                                     <i class="fa fa-circle small me-1"></i>
                                     {{ $user['status'] }}
                                 </span>
