@@ -131,7 +131,7 @@ private function paginate($items, $perPage)
         // Send PUT request to update the category or subcategory
         $response = Http::put("https://app.talentindustrial.com/plumber/category/{$id}", [
             'name' => $request->name,
-            // 'points' => $request->points,
+            'price' => $request->price,
             'itemsFlag' => $request->itemsFlag,
         
         ]);

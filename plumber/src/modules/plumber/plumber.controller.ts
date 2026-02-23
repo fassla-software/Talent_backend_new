@@ -127,9 +127,7 @@ export const forgetPassword = asyncHandler(async (req: Request, res: Response) =
     .catch(error => console.error('Error Checking Balance:', error.message));
 
   res.status(200).json({ message: 'otp send successfully' });
-}, 'felid to forget password');
-
-
+}, 'failed to forget password');
 
 export const validatePhoneOtpAndGenerateToken = asyncHandler(async (req: Request, res: Response) => {
   const { phone, otp, role } = req.body;
@@ -142,14 +140,14 @@ export const validatePhoneOtpAndGenerateToken = asyncHandler(async (req: Request
     expiresIn: '5m',
   });
   res.status(200).json({ token });
-}, 'felid to valid otp');
+}, 'failed to valid otp');
 
 export const updateUserPasswordHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.id;
   const { password } = req.body;
   await updatePassword(userId, password);
   res.status(200).json({ message: 'password updated successfully' });
-}, 'felid to update password');
+}, 'failed to update password');
 
 export const refreshTokenHandler = asyncHandler(async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;

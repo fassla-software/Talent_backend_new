@@ -82,12 +82,22 @@
 
                     <div class="info-list">
                         <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                            <span class="text-muted"><i class="fa fa-user-tag me-2"></i> Role</span>
+                            <span class="fw-bold text-dark">Plumber</span>
+                        </div>
+                        <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
                             <span class="text-muted"><i class="fa fa-phone me-2"></i> Phone</span>
                             <span class="fw-bold text-dark">{{ $plumber->user->phone ?? '---' }}</span>
                         </div>
                         <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
                             <span class="text-muted"><i class="fa fa-id-card me-2"></i> Nationality</span>
                             <span class="fw-bold text-dark">{{ $plumber->nationality_id ?? '---' }}</span>
+                        </div>
+                        <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                            <span class="text-muted"><i class="fa fa-check-circle me-2"></i> Verified</span>
+                            <span class="fw-bold {{ $plumber->is_verified ? 'text-success' : 'text-danger' }}">
+                                {{ $plumber->is_verified ? 'Verified' : 'Unverified' }}
+                            </span>
                         </div>
                         <div class="info-item d-flex justify-content-between align-items-center py-3 border-bottom">
                             <span class="text-muted"><i class="fa fa-user-tie me-2"></i> Added By (Envoy)</span>
@@ -170,6 +180,14 @@
                             <div class="p-3 rounded-3 bg-light border-start border-4 border-warning">
                                 <label class="text-muted small fw-bold d-block mb-1">ACCOUNT ID</label>
                                 <span class="fs-5 fw-semibold">USR-{{ str_pad($plumber->user_id, 6, '0', STR_PAD_LEFT) }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 bg-light border-start border-4 border-secondary">
+                                <label class="text-muted small fw-bold d-block mb-1">PLUMBER STATUS</label>
+                                <span class="badge {{ $plumber->status === 'APPROVED' ? 'bg-soft-success text-success' : ($plumber->status === 'PENDING' ? 'bg-soft-warning text-warning' : 'bg-soft-danger text-danger') }} fs-5 fw-semibold">
+                                    {{ $plumber->status ?? 'N/A' }}
+                                </span>
                             </div>
                         </div>
                     </div>

@@ -28,12 +28,15 @@ class SegmentController extends Controller
         // Extract "withdraw_points" value
         $withdrawPoints = collect($configResponse->json())
             ->firstWhere('key', 'withdraw_points')['value'] ?? 'N/A';
+            
+        $loyaltyCapPercentage = collect($configResponse->json())
+            ->firstWhere('key', 'loyalty_cap_percentage')['value'] ?? 10;
 
         
     }
 
     // Pass segments, withdrawPoints, fixedPoints, and totalValue to the view
-    return view('segments.index', compact('segments', 'withdrawPoints'));
+    return view('segments.index', compact('segments', 'withdrawPoints', 'loyaltyCapPercentage'));
 }
 
 
@@ -90,26 +93,28 @@ public function updateWithdrawPoints(Request $request)
     // Validate the incoming request
     $request->validate([
         'withdraw_points' => 'required|numeric',
+        'loyalty_cap_percentage' => 'required|numeric|min:0|max:100',
     ]);
 
-    $apiUrl = 'https://app.talentindustrial.com/plumber/config/';
-    
-    // Prepare the data to send in the POST request
-    $data = [
+    // Send the POST request for withdraw_points
+    $response1 = Http::post($apiUrl, [
         'key' => 'withdraw_points',
         'value' => $request->input('withdraw_points'),
-    ];
+    ]);
 
-    // Send the POST request
-    $response = Http::post($apiUrl, $data);
+    // Send the POST request for loyalty_cap_percentage
+    $response2 = Http::post($apiUrl, [
+        'key' => 'loyalty_cap_percentage',
+        'value' => $request->input('loyalty_cap_percentage'),
+    ]);
 
     // Log the response for debugging (API response)
-    \Log::info('API Response:', $response->json());
+    // \Log::info('API Response:', $response1->json());
 
     // Check if the request was successful
-    if ($response->successful()) {
+    if ($response1->successful() && $response2->successful()) {
         // Redirect with success message
-        return redirect()->route('segments.index')->with('success', 'Withdraw Points updated successfully!');
+        return redirect()->route('segments.index')->with('success', 'Configuration updated successfully!');
     }
 
     // Log the error for debugging (in case of failure)

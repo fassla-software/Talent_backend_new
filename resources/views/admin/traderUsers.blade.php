@@ -70,6 +70,7 @@
                                     <th>ID</th>
                                     <th>Name</th>
                                     <th>Phone</th>
+                                    <th>Status</th>
                                     <th>City</th>
                                     <th>Added By (Envoy)</th>
                                     <th>Created At</th>
@@ -82,6 +83,15 @@
                                         <td>{{ $trader->id }}</td>
                                         <td>{{ $trader->user->name ?? 'No User' }}</td>
                                         <td>{{ $trader->user->phone ?? 'N/A' }}</td>
+                                        <td>
+                                            @php
+                                                $status = $trader->user->status ?? 'PENDING';
+                                                $badgeClass = 'bg-warning text-dark';
+                                                if ($status === 'APPROVED') $badgeClass = 'bg-success text-white';
+                                                if ($status === 'REJECTED') $badgeClass = 'bg-danger text-white';
+                                            @endphp
+                                            <span class="badge {{ $badgeClass }}">{{ $status }}</span>
+                                        </td>
                                         <td>{{ $trader->city ?? 'N/A' }}</td>
                                         <td>{{ $trader->inspector->name ?? 'N/A' }} ({{ $trader->inspector->phone ?? 'N/A' }})</td>
                                         <td>{{ $trader->created_at->format('Y-m-d H:i') }}</td>

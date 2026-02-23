@@ -374,7 +374,6 @@ export const registerPlumber = async (newPlumber: ICreatePlumber, role: Roles = 
 //   return { token, user: plumberResponse };
 // };
 
-
 export const loginPlumber = async (data: ILoginPlumber) => {
   const { password, phone, device_token, device_type } = data;
   const user = await User.findOne({ where: { phone } });
@@ -404,15 +403,16 @@ export const loginPlumber = async (data: ILoginPlumber) => {
   await user.save();
 
   if (role === Roles.Envoy || role === Roles.TRADER) {
+    const userJson = user.toJSON();
     if (role === Roles.Envoy) {
       const envoySetting = await EnvoySetting.findOne({ where: { user_id: user.id } });
-      return { token, user: { ...user.toJSON(), role, envoySetting } };
+      return { token, user: { ...userJson, role, envoySetting } };
     }
     if (role === Roles.TRADER) {
       if (user.status === PlumberStatus.PENDING) throw new HttpError('trader not approved yet', 401);
       if (user.status === PlumberStatus.REJECTED) throw new HttpError('trader rejected', 401);
     }
-    return { token, user: { ...user.toJSON(), role } };
+    return { token, user: { ...userJson, role } };
   }
 
   const plumber = await Plumber.findOne({

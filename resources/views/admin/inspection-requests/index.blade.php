@@ -552,6 +552,20 @@ $statusTexts = [
                 currentRequestId = parseInt(requestData.id, 10);
 
                 const totalPoints = requestData.items.reduce((sum, item) => sum + (item.count * item.subcategory.points), 0);
+                const totalPrice = requestData.items.reduce((sum, item) => sum + (item.count * (item.subcategory.price || 0)), 0);
+                
+                const withdrawPointsVal = {{ $withdrawPoints }};
+                const loyaltyCapPct = {{ $loyaltyCapPercentage }};
+                
+                let loyaltyValue = totalPoints * withdrawPointsVal;
+                const maxLoyalty = totalPrice * (loyaltyCapPct / 100);
+                
+                let isCapped = false;
+                let finalLoyalty = loyaltyValue;
+                if (loyaltyValue > maxLoyalty && totalPrice > 0) {
+                    finalLoyalty = maxLoyalty;
+                    isCapped = true;
+                }
 
                 const detailsHTML = `
                     <div class="mb-3"><strong>ID:</strong> ${requestData.id}</div>
@@ -595,13 +609,25 @@ $statusTexts = [
                                         <img src="${item.subcategory.image}" alt="${item.subcategory.name}">
                                         <span class="name">Name: ${item.subcategory.name}</span>
                                         <span class="count">Count: ${item.count}</span>
-                                        <span class="count">X ${item.subcategory.points}</span>
-                                        <span class="count">= ${item.count*item.subcategory.points}</span>
+                                        <span class="count">Points: ${item.subcategory.points}</span>
+                                        <span class="count">Price: ${item.subcategory.price || 0}</span>
+                                        <span class="count">SubTotal: ${item.count * (item.subcategory.price || 0)}</span>
                                     </div>
                                 `
                                 )
                                 .join('')}
-                            <span style="margin-top: 10px; margin-left: auto;" class="count">Total Points ${totalPoints}</span>
+                            <div class="mt-3 p-2 bg-light rounded">
+                                <div><strong>Total Bill Price:</strong> <span class="text-primary">${totalPrice.toFixed(2)}</span></div>
+                                <div><strong>Total Points:</strong> <span class="text-info">${totalPoints}</span></div>
+                                <div><strong>Loyalty Value (Points * ${withdrawPointsVal}):</strong> <span class="text-success">${loyaltyValue.toFixed(2)}</span></div>
+                                <div><strong>Loyalty Cap (${loyaltyCapPct}% of Bill):</strong> <span class="text-warning">${maxLoyalty.toFixed(2)}</span></div>
+                                <div class="mt-2">
+                                    <strong>Final Withdrawal Amount:</strong> 
+                                    <span class="badge ${isCapped ? 'bg-danger' : 'bg-success'}" style="font-size: 1.1rem;">
+                                        ${finalLoyalty.toFixed(2)} ${isCapped ? '(CAPPED)' : ''}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="mb-3">

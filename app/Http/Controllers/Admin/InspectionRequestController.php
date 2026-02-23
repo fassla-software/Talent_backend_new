@@ -150,7 +150,14 @@ class InspectionRequestController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        return view('admin.inspection-requests.index', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses'));
+        // Fetch configurations for loyalty calculation
+        $configResponse = Http::get('https://app.talentindustrial.com/plumber/config/all');
+        $configs = $configResponse->successful() ? collect($configResponse->json()) : collect();
+        
+        $withdrawPoints = $configs->firstWhere('key', 'withdraw_points')['value'] ?? 0;
+        $loyaltyCapPercentage = $configs->firstWhere('key', 'loyalty_cap_percentage')['value'] ?? 10;
+
+        return view('admin.inspection-requests.index', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses', 'withdrawPoints', 'loyaltyCapPercentage'));
     }
 
     // ✅ Function to Store Only New "SEND" Requests as Notifications

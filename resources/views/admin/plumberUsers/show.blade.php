@@ -75,6 +75,16 @@
                                 <p class="form-control-plaintext">{{ $plumber->instant_withdrawal }}</p>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3 p-2 border rounded bg-light">
+                                <label class="font-weight-bolder">Status</label>
+                                <p class="form-control-plaintext">
+                                    <span class="badge border {{ $plumber->status === 'APPROVED' ? 'badge-success' : ($plumber->status === 'PENDING' ? 'badge-warning' : 'badge-danger') }}">
+                                        {{ $plumber->status ?? 'N/A' }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-3">

@@ -86,27 +86,27 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-white border mb-4 {{ $status_filter == 'INACTIVE' ? 'border-danger' : '' }}">
+        <div class="card bg-white border mb-4 {{ $status_filter == 'INACTIVE' ? 'border-info' : '' }}">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1 text-muted">{{ __('Inactive') }}</h6>
-                        <h2 class="mb-0 text-danger">{{ $stats['status_counts']['inactive'] }}</h2>
+                        <h2 class="mb-0 text-info">{{ $stats['status_counts']['inactive'] }}</h2>
                     </div>
-                    <i class="fa fa-times-circle fa-2x text-danger opacity-25"></i>
+                    <i class="fa fa-times-circle fa-2x text-info opacity-25"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-white border mb-4 {{ $status_filter == 'DORMANT' ? 'border-info' : '' }}">
+        <div class="card bg-white border mb-4 {{ $status_filter == 'DORMANT' ? 'border-danger' : '' }}">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1 text-muted">{{ __('Dormant') }}</h6>
-                        <h2 class="mb-0 text-info">{{ $stats['status_counts']['dormant'] }}</h2>
+                        <h2 class="mb-0 text-danger">{{ $stats['status_counts']['dormant'] }}</h2>
                     </div>
-                    <i class="fa fa-moon fa-2x text-info opacity-25"></i>
+                    <i class="fa fa-moon fa-2x text-danger opacity-25"></i>
                 </div>
             </div>
         </div>
@@ -197,7 +197,7 @@
                                 <span class="text-{{ 
                                     in_array(strtolower($user['status']), ['approved', 'active']) ? 'success' : 
                                     (strtolower($user['status']) == 'pending' ? 'warning' : 
-                                    (strtolower($user['status']) == 'dormant' ? 'info' : 'danger')) 
+                                    (strtolower($user['status']) == 'dormant' ? 'danger' : 'info')) 
                                 }}">
                                     <i class="fa fa-circle small me-1"></i>
                                     {{ $user['status'] }}

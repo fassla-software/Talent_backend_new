@@ -6,6 +6,7 @@ interface PlumberCategoryAttributes {
   name: string;
   image: string;
   points: number;
+  price: number;
   product_flag: boolean;
   parent_id?: number | null;
   createdAt: Date;
@@ -15,7 +16,7 @@ interface PlumberCategoryAttributes {
 }
 
 interface PlumberCategoryCreationAttributes
-  extends Optional<PlumberCategoryAttributes, 'id' | 'createdAt' | 'updatedAt' | 'parent_id'> {}
+  extends Optional<PlumberCategoryAttributes, 'id' | 'createdAt' | 'updatedAt' | 'parent_id'> { }
 
 class PlumberCategory extends Model<PlumberCategoryAttributes, PlumberCategoryCreationAttributes> {
   public id!: number;
@@ -23,6 +24,7 @@ class PlumberCategory extends Model<PlumberCategoryAttributes, PlumberCategoryCr
   public image!: string;
   public parent_id?: number | null;
   public points!: number;
+  public price!: number;
   public product_flag!: boolean;
   public createdAt!: Date;
   public updatedAt!: Date;
@@ -49,6 +51,10 @@ PlumberCategory.init(
     },
     points: {
       type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    price: {
+      type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0,
     },
     product_flag: {

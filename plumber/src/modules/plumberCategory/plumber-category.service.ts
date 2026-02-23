@@ -62,10 +62,11 @@ export const addProductCategory = async (data: {
   name: string;
   image: string;
   points: number;
+  price: number;
   product_flag: boolean;
   category_id: number;
 }) => {
-  const { name, image, category_id, points, product_flag } = data;
+  const { name, image, category_id, points, price, product_flag } = data;
   const existingCategory = await PlumberCategory.findOne({ where: { name: name, parent_id: category_id ?? null } });
   if (existingCategory) {
     throw new HttpError('Category with this name already exists', 400);
@@ -75,15 +76,16 @@ export const addProductCategory = async (data: {
     name: name,
     image: imageUrl,
     parent_id: category_id ?? null,
-    points,
+    points: points || 0,
+    price: price || 0,
     product_flag,
   });
 
   return category;
 };
 
-export const addCategory = async (data: { name: string; image: string; points: number; category_id?: number }) => {
-  const { name, image, category_id, points } = data;
+export const addCategory = async (data: { name: string; image: string; points: number; price: number; category_id?: number }) => {
+  const { name, image, category_id, points, price } = data;
   const existingCategory = await PlumberCategory.findOne({ where: { name: name, parent_id: category_id ?? null } });
   if (existingCategory) {
     throw new HttpError('Category with this name already exists', 400);
@@ -93,7 +95,8 @@ export const addCategory = async (data: { name: string; image: string; points: n
     name: name,
     image: imageUrl,
     parent_id: category_id ?? null,
-    // points,
+    points: 0,
+    price: price || 0,
     product_flag: false,
   });
 
@@ -151,7 +154,7 @@ export const getCategoryById = async (id: string) => {
 
 export const updateCategory = async (
   id: string,
-  { name, image, category_id, points }: { name: string; image: string; points: number; category_id?: number },
+  { name, image, category_id, points, price }: { name: string; image: string; points: number; price: number; category_id?: number },
 ) => {
   const category = await PlumberCategory.findByPk(id);
 
@@ -159,7 +162,8 @@ export const updateCategory = async (
     throw new HttpError('Category not found', 404);
   }
   category.name = name || category.name;
-  category.points = points || category.points;
+  category.points = points !== undefined ? points : category.points;
+  category.price = price !== undefined ? price : category.price;
 
   category.image = (saveImages(image) as string) || category.image;
   if (category_id) category.parent_id = category_id;

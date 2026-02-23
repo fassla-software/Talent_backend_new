@@ -12,7 +12,7 @@ class PlumberCategory extends Model
     protected $guarded = ['id']; // Guard against mass assignment
 
     protected $table = 'plumber_categories';
-    protected $fillable = ['name', 'parent_id', 'image', 'points', 'product_flag', 'created_at', 'updated_at'];
+    protected $fillable = ['name', 'parent_id', 'image', 'price', 'points', 'product_flag', 'created_at', 'updated_at'];
 
 
     /**

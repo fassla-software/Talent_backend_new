@@ -518,7 +518,23 @@ export const approveInspectionRequest = async (data: {
   const points = calcUserPoints(items);
   console.log({ points });
   const pointValue = await getConfigService('withdraw_points');
-  const money = points * Number(pointValue);
+  const loyaltyCapPercentage = await getConfigService('loyalty_cap_percentage'); // e.g., "10" for 10%
+  const capRate = loyaltyCapPercentage ? Number(loyaltyCapPercentage) / 100 : 0.1; // Default to 10%
+
+  // Calculate total price of the bill
+  const totalBillPrice = items.reduce((acc, item) => {
+    const price = item.subcategory?.price || 0;
+    return acc + Number(price) * item.count;
+  }, 0);
+
+  let money = points * Number(pointValue);
+
+  // Apply loyalty cap: withdraw value shouldn't exceed percentage of the bill
+  const maxLoyaltyValue = totalBillPrice * capRate;
+  if (money > maxLoyaltyValue && totalBillPrice > 0) {
+    money = maxLoyaltyValue;
+  }
+
   const [plumber] = await Plumber.update(
     {
       fixed_points: Sequelize.literal(`fixed_points + ${points}`),

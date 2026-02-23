@@ -5,7 +5,7 @@
     <h1>
         Segments
         <small class="text-muted" style="font-size: 0.9rem;">
-            (Withdraw Points: {{ $withdrawPoints }})
+            (Withdraw Points: {{ $withdrawPoints }}, Loyalty Cap: {{ $loyaltyCapPercentage }}%)
         </small>
         
         <!-- Edit button that opens the modal -->
@@ -44,6 +44,10 @@
                         <div class="mb-3">
                             <label for="withdraw_points" class="form-label">Withdraw Points</label>
                             <input type="number" class="form-control" id="withdraw_points" name="withdraw_points" value="{{ old('withdraw_points', $withdrawPoints) }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loyalty_cap_percentage" class="form-label">Loyalty Cap Percentage (%)</label>
+                            <input type="number" class="form-control" id="loyalty_cap_percentage" name="loyalty_cap_percentage" value="{{ old('loyalty_cap_percentage', $loyaltyCapPercentage) }}" required min="0" max="100">
                         </div>
                     </div>
                     <div class="modal-footer">
