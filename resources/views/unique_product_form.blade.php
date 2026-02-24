@@ -46,6 +46,12 @@
             <input type="number" id="points" name="points" class="form-control" step="0.01" required>
         </div>
 
+        <!-- Price -->
+        <div class="mb-3">
+            <label for="price" class="form-label">Price</label>
+            <input type="number" id="price" name="price" class="form-control" step="0.01" required>
+        </div>
+
         <!-- Hidden Product Flag (Always Checked) -->
         <input type="hidden" id="productFlag" name="product_flag" value="1">
 
@@ -79,6 +85,7 @@
                     image: imageUrl,
                     category_id: document.getElementById('category').value,
                     points: document.getElementById('points').value,
+                    price: document.getElementById('price').value,
                     product_flag: 1, // Always save as checked
                 };
 

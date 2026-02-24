@@ -65,6 +65,7 @@
                     <th>Name</th>
                     <th>Parent</th>
                     <th>Points</th>
+                    <th>Price</th>
                     <th>Image</th>
                     <th>Actions</th>
                 </tr>
@@ -79,6 +80,7 @@
                         <td>{{ $category->name }}</td>
                         <td>{{ $category->parent ? $category->parent->name : 'No Parent' }}</td>
                         <td>{{ $category->points }}</td>
+                        <td>{{ number_format($category->price, 2) }}</td>
                         <td>
                             <img src="{{ asset("plumber/uploads/" . $category->image) }}" alt="Category Image"
                                  class="img-thumbnail" style="width: 50px; height: 50px;">
@@ -90,6 +92,7 @@
                                data-id="{{ $category->id }}"
                                data-name="{{ $category->name }}"
                                data-points="{{ $category->points }}"
+                               data-price="{{ $category->price }}"
                                data-parent_id="{{ $category->parent_id }}"
                                data-image="{{ $category->image }}"
                                onclick="event.stopPropagation();">
@@ -177,6 +180,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     </div>
 
                     <div class="mb-3">
+                        <label for="categoryPrice" class="form-label">Price</label>
+                        <input type="number" class="form-control" id="categoryPrice" name="price" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="category" class="form-label">Category</label>
                         <select id="category" name="category_id" class="form-control">
                             <option value="">Select a Category</option>
@@ -222,15 +230,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const id         = button.getAttribute('data-id');
         const name       = button.getAttribute('data-name');
         const points     = button.getAttribute('data-points');
+        const price      = button.getAttribute('data-price');
         const parentId   = button.getAttribute('data-parent_id');
         const imageUrl   = button.getAttribute('data-image');
 
-        console.log('EDIT MODAL TRIGGERED =>', { id, name, points, parentId, imageUrl });
+        console.log('EDIT MODAL TRIGGERED =>', { id, name, points, price, parentId, imageUrl });
 
         // Populate the hidden input & text fields
         document.getElementById('categoryId').value     = id;
         document.getElementById('categoryName').value   = name;
         document.getElementById('categoryPoints').value = points;
+        document.getElementById('categoryPrice').value  = price;
 
         // Pre-select the category dropdown
         const categorySelect = document.getElementById('category');
@@ -294,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const requestData = {
             name:       originalFormData.get('name'),
             points:     originalFormData.get('points'),
+            price:      originalFormData.get('price'),
             category_id: originalFormData.get('category_id'),
         };
 

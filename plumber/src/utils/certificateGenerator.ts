@@ -12,11 +12,13 @@ type certificateData = {
   company_phone: string;
   user_phone: string;
   url: string;
+  description: string;
 };
 
 // Function to generate a PDF with a background image and barcode
 export const generateCardWithBackground = async (certificate: certificateData, shortenedUrl: string) => {
-  const { user_name, certificate_id, city, company_name, date, company_phone, user_phone, address } = certificate;
+  const { user_name, certificate_id, city, company_name, date, company_phone, user_phone, address, description } =
+    certificate;
   const templatePath = path.resolve(__dirname, '../../assets/index.html'); // Path to the HTML template
 
   try {
@@ -41,6 +43,7 @@ export const generateCardWithBackground = async (certificate: certificateData, s
         date: string;
         company_phone: string;
         user_phone: string;
+        description: string;
       }) => {
         const {
           user_name = '',
@@ -52,6 +55,7 @@ export const generateCardWithBackground = async (certificate: certificateData, s
           date = '',
           company_phone = '',
           user_phone = '',
+          description = '',
         } = params;
 
         const nameElement = document.querySelector('#name') as HTMLElement;
@@ -80,6 +84,9 @@ export const generateCardWithBackground = async (certificate: certificateData, s
 
         const companyPhoneElement = document.querySelector('#company_phone') as HTMLElement;
         if (companyPhoneElement) companyPhoneElement.innerText = company_phone;
+
+        const descriptionElement = document.querySelector('#description') as HTMLElement;
+        if (descriptionElement) descriptionElement.innerText = description;
       },
       {
         user_name,
@@ -91,6 +98,7 @@ export const generateCardWithBackground = async (certificate: certificateData, s
         date,
         company_phone,
         user_phone,
+        description,
       },
     );
     const name = path.basename(shortenedUrl);

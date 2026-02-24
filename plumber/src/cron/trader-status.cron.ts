@@ -13,15 +13,9 @@ export const initTraderStatusCron = () => {
     cron.schedule('0 0 * * 0', async () => {
         console.log('Running trader status update cron job...');
         try {
-            const activeTraders = await Trader.findAll({
-                where: {
-                    status: {
-                        [Op.ne]: TraderActivityStatus.DORMANT,
-                    },
-                },
-            });
+            const traders = await Trader.findAll();
 
-            for (const trader of activeTraders) {
+            for (const trader of traders) {
                 // Find the last visit with sales_value for this trader
                 const lastVisit = await InspectionVisit.findOne({
                     where: {
@@ -52,42 +46,52 @@ export const initTraderStatusCron = () => {
                 const diffTime = Math.abs(now.getTime() - lastActivityDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                if (diffDays > 60) {
+                if (diffDays <= 30) {
+                    if (trader.status !== TraderActivityStatus.ACTIVE) {
+                        const oldStatus = trader.status;
+                        await trader.update({ status: TraderActivityStatus.ACTIVE });
+                        await logStatusChange(
+                            trader.id,
+                            ClientType.TRADER,
+                            oldStatus,
+                            TraderActivityStatus.ACTIVE
+                        );
+                        console.log(`Trader ${trader.id} status updated to ACTIVE`);
+                    }
+                } else if (diffDays > 60) {
                     // More than 2 months (approx 60 days) -> DORMANT
-                    const oldStatus = trader.status;
-                    await trader.update({ status: TraderActivityStatus.DORMANT });
-                    await logStatusChange(
-                        trader.id,
-                        ClientType.TRADER,
-                        oldStatus,
-                        TraderActivityStatus.DORMANT
-                    );
-                    console.log(`Trader ${trader.id} status updated to DORMANT`);
+                    if (trader.status !== TraderActivityStatus.DORMANT) {
+                        const oldStatus = trader.status;
+                        await trader.update({ status: TraderActivityStatus.DORMANT });
+                        await logStatusChange(
+                            trader.id,
+                            ClientType.TRADER,
+                            oldStatus,
+                            TraderActivityStatus.DORMANT
+                        );
+                        console.log(`Trader ${trader.id} status updated to DORMANT`);
+                    }
                 } else if (diffDays > 30) {
                     // More than 1 month (approx 30 days) -> INACTIVE
-                    const oldStatus = trader.status;
-                    await trader.update({ status: TraderActivityStatus.INACTIVE });
-                    await logStatusChange(
-                        trader.id,
-                        ClientType.TRADER,
-                        oldStatus,
-                        TraderActivityStatus.INACTIVE
-                    );
-                    console.log(`Trader ${trader.id} status updated to INACTIVE`);
+                    if (trader.status !== TraderActivityStatus.INACTIVE) {
+                        const oldStatus = trader.status;
+                        await trader.update({ status: TraderActivityStatus.INACTIVE });
+                        await logStatusChange(
+                            trader.id,
+                            ClientType.TRADER,
+                            oldStatus,
+                            TraderActivityStatus.INACTIVE
+                        );
+                        console.log(`Trader ${trader.id} status updated to INACTIVE`);
+                    }
                 }
             }
             console.log('Trader status update cron job completed.');
 
             console.log('Running plumber status update cron job...');
-            const activePlumbers = await Plumber.findAll({
-                where: {
-                    status: {
-                        [Op.ne]: PlumberAccountStatus.DORMANT,
-                    },
-                },
-            });
+            const plumbers = await Plumber.findAll();
 
-            for (const plumber of activePlumbers) {
+            for (const plumber of plumbers) {
                 // Find the last visit with sales_value for this plumber
                 const lastVisit = await InspectionVisit.findOne({
                     where: {
@@ -128,26 +132,42 @@ export const initTraderStatusCron = () => {
                 const diffTime = Math.abs(now.getTime() - lastActivityDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                if (diffDays > 60) {
-                    const oldStatus = plumber.status;
-                    await plumber.update({ status: PlumberAccountStatus.DORMANT });
-                    await logStatusChange(
-                        plumber.id,
-                        ClientType.PLUMBER,
-                        oldStatus,
-                        PlumberAccountStatus.DORMANT
-                    );
-                    console.log(`Plumber ${plumber.id} status updated to DORMANT`);
+                if (diffDays <= 30) {
+                    if (plumber.status !== PlumberAccountStatus.ACTIVE) {
+                        const oldStatus = plumber.status;
+                        await plumber.update({ status: PlumberAccountStatus.ACTIVE });
+                        await logStatusChange(
+                            plumber.id,
+                            ClientType.PLUMBER,
+                            oldStatus,
+                            PlumberAccountStatus.ACTIVE
+                        );
+                        console.log(`Plumber ${plumber.id} status updated to ACTIVE`);
+                    }
+                } else if (diffDays > 60) {
+                    if (plumber.status !== PlumberAccountStatus.DORMANT) {
+                        const oldStatus = plumber.status;
+                        await plumber.update({ status: PlumberAccountStatus.DORMANT });
+                        await logStatusChange(
+                            plumber.id,
+                            ClientType.PLUMBER,
+                            oldStatus,
+                            PlumberAccountStatus.DORMANT
+                        );
+                        console.log(`Plumber ${plumber.id} status updated to DORMANT`);
+                    }
                 } else if (diffDays > 30) {
-                    const oldStatus = plumber.status;
-                    await plumber.update({ status: PlumberAccountStatus.INACTIVE });
-                    await logStatusChange(
-                        plumber.id,
-                        ClientType.PLUMBER,
-                        oldStatus,
-                        PlumberAccountStatus.INACTIVE
-                    );
-                    console.log(`Plumber ${plumber.id} status updated to INACTIVE`);
+                    if (plumber.status !== PlumberAccountStatus.INACTIVE) {
+                        const oldStatus = plumber.status;
+                        await plumber.update({ status: PlumberAccountStatus.INACTIVE });
+                        await logStatusChange(
+                            plumber.id,
+                            ClientType.PLUMBER,
+                            oldStatus,
+                            PlumberAccountStatus.INACTIVE
+                        );
+                        console.log(`Plumber ${plumber.id} status updated to INACTIVE`);
+                    }
                 }
             }
             console.log('Plumber status update cron job completed.');

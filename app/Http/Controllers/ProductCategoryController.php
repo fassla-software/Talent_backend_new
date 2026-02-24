@@ -49,8 +49,9 @@ public function downloadTemplate()
             $cat4 = isset($row[3]) ? trim($row[3]) : null; // APP Cat 4
             $cat5 = isset($row[4]) ? trim($row[4]) : null; // APP Cat 5
             $productName = isset($row[5]) ? trim($row[5]) : null; // Product name
-			$points = isset($row[6]) ? (float) trim($row[6]) : 0.00;
-            $image = isset($row[7]) ? trim($row[7]) : null; // Img No
+            $points = isset($row[6]) ? (float) trim($row[6]) : 0.00; // Points
+            $price = isset($row[7]) ? (float) trim($row[7]) : 0.00; // Price
+            $image = isset($row[8]) ? trim($row[8]) : null; // Img No
 
             // Skip the row if Cat. 1 or product name is missing
             if (empty($cat1) || empty($productName)) {
@@ -94,6 +95,7 @@ public function downloadTemplate()
                 'parent_id' => $parentId,
                 'image' => $image,
                 'points' => $points, // Points from the Excel file
+                'price' => $price, // Price from the Excel file
                 'product_flag' => 1, // Products always have product_flag = 1
                 'created_at' => now(),
                 'updated_at' => now(),

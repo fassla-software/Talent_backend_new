@@ -46,6 +46,7 @@ $dropdownCategories = PlumberCategory::where('product_flag', 0)
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:plumber_categories,id',
             'points' => 'required|numeric',
+            'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|string',
             'product_flag' => 'sometimes|boolean',
         ]);
@@ -58,6 +59,7 @@ $dropdownCategories = PlumberCategory::where('product_flag', 0)
             'parent_id' => $request->category_id,
             'image' => $imageName,
             'points' => $request->points,
+            'price' => $request->price ?? 0,
             'product_flag' => $request->product_flag ? 1 : 0,
         ]);
 
@@ -114,6 +116,7 @@ public function update(Request $request, $id)
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:plumber_categories,id',
             'points' => 'required|numeric',
+            'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|string',
         ]);
 
@@ -123,6 +126,7 @@ public function update(Request $request, $id)
             'name' => $request->name,
             'parent_id' => $request->category_id,
             'points' => $request->points,
+            'price' => $request->price ?? 0,
             'image' => $imageName,
         ]);
 

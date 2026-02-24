@@ -96,6 +96,8 @@ public function updateWithdrawPoints(Request $request)
         'loyalty_cap_percentage' => 'required|numeric|min:0|max:100',
     ]);
 
+    $apiUrl = 'https://app.talentindustrial.com/plumber/config/';
+
     // Send the POST request for withdraw_points
     $response1 = Http::post($apiUrl, [
         'key' => 'withdraw_points',

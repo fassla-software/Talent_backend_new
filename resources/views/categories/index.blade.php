@@ -69,7 +69,7 @@
                     <th>Name</th>
                     <th>Parent</th>
                     <th>Level</th>
-                    <th>Price</th>
+                    <th>Image</th>
                     <th>Image</th>
                     <th>Actions</th>
                 </tr>
@@ -84,7 +84,6 @@
                         <td>{{ $category->name }}</td>
                         <td>{{ $category->parent ? $category->parent->name : 'No Parent' }}</td>
                         <td>{{ $category->level }}</td>
-                        <td>{{ number_format($category->price, 2) }}</td>
                         <td>
                             <img src="{{ asset("plumber/uploads/" . $category->image) }}" class="img-thumbnail" style="width: 50px; height: 50px;">
                         </td>
@@ -96,7 +95,6 @@
    data-name="{{ $category->name }}" 
    data-parent_id="{{ $category->parent_id ?? '' }}"  {{-- ✅ Pass Parent ID or empty if NULL --}}
    data-points="{{ $category->points }}"
-   data-price="{{ $category->price }}"
    onclick="event.stopPropagation();">
     Edit
 </a>
@@ -169,10 +167,6 @@ document.addEventListener("DOMContentLoaded", function() {
                         <input type="text" class="form-control" id="addName" name="name">
                     </div>
                     <div class="mb-3">
-                        <label for="addPrice" class="form-label">Price</label>
-                        <input type="number" step="0.01" class="form-control" id="addPrice" name="price" value="0">
-                    </div>
-                    <div class="mb-3">
                         <label for="addImage" class="form-label">Image</label>
                         <input type="file" class="form-control" id="addImage" name="image">
                     </div>
@@ -227,10 +221,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     <div class="mb-3">
                         <label for="categoryName" class="form-label">Name</label>
                         <input type="text" class="form-control" id="categoryName" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="categoryPrice" class="form-label">Price</label>
-                        <input type="number" step="0.01" class="form-control" id="categoryPrice" name="price" required>
                     </div>
                     <div class="mb-3" style="display: none">
                         <label for="categoryPoints" class="form-label">Points</label>
@@ -292,9 +282,8 @@ document.getElementById('addCategoryForm').addEventListener('submit', function (
     const formData = new FormData();
     const imageInput = document.getElementById('addImage');
 
-    // Get category name and price
+    // Get category name
     const categoryName = document.getElementById('addName').value.trim();
-    const categoryPrice = document.getElementById('addPrice').value.trim() || 0;
     if (!categoryName) {
         alert("Category name is required.");
         return;
@@ -322,7 +311,6 @@ document.getElementById('addCategoryForm').addEventListener('submit', function (
                 name: categoryName,
                 image: imageUrl, // Use uploaded image URL
                 points: 5,  // Default points (you can change this if necessary)
-                price: categoryPrice,
                 parent_id: categoryId // Null if no parent selected
             };
 
@@ -370,7 +358,6 @@ editModal.addEventListener('show.bs.modal', function (event) {
     const parentId = button.getAttribute('data-parent_id'); // ✅ Parent ID
 
     const points = button.getAttribute('data-points');
-    const price = button.getAttribute('data-price');
     const imageUrl = button.getAttribute('data-image'); // Existing image
 
     // Set form values
@@ -378,7 +365,6 @@ editModal.addEventListener('show.bs.modal', function (event) {
     form.action = `https://app.talentindustrial.com/plumber/category/${id}`;
     document.getElementById('categoryId').value = id;
     document.getElementById('categoryName').value = name;
-    document.getElementById('categoryPrice').value = price;
     document.getElementById('categoryPoints').value = points;
     const parentSelect = document.getElementById('editCategory'); // Make sure this is the correct ID
 // Convert both to the same type (string) before comparison
@@ -390,7 +376,6 @@ editModal.addEventListener('show.bs.modal', function (event) {
     }
     // Store existing values for reference
     form.dataset.originalName = name;
-    form.dataset.originalPrice = price;
     form.dataset.originalPoints = points;
     form.dataset.originalImage = imageUrl;
 
@@ -415,7 +400,6 @@ document.getElementById('editForm').addEventListener('submit', function (e) {
 
     // Check for changes
     const newName = formData.get('name').trim() || originalName;
-    const newPrice = formData.get('price').trim() || originalPrice;
     const newPoints = formData.get('points').trim() || originalPoints;
 
     if (imageInput.files.length > 0) {
@@ -430,7 +414,7 @@ document.getElementById('editForm').addEventListener('submit', function (e) {
         .then(imageResponse => {
             if (imageResponse.images && Array.isArray(imageResponse.images) && imageResponse.images.length > 0) {
                 const uploadedImageUrl = imageResponse.images[0]; // Get uploaded image URL
-                updateCategory(url, newName, newPrice, newPoints, uploadedImageUrl);
+                updateCategory(url, newName, newPoints, uploadedImageUrl);
             } else {
                 throw new Error('Image upload failed. No valid image URL returned.');
             }
@@ -440,16 +424,15 @@ document.getElementById('editForm').addEventListener('submit', function (e) {
             alert('Failed to upload image. Please try again.');
         });
     } else {
-        updateCategory(url, newName, newPrice, newPoints, originalImage);
+        updateCategory(url, newName, newPoints, originalImage);
     }
 });
 
 // Function to update category
-function updateCategory(url, name, price, points, imageUrl) {
+function updateCategory(url, name, points, imageUrl) {
     const requestData = {
         name: name,
         points: 0,
-        price: price,
         image: imageUrl,
     };
 
