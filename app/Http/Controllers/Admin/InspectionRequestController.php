@@ -36,9 +36,12 @@ class InspectionRequestController extends Controller
              $queryParams['inspector_id'] = request('assigned_to');
         }
 
+        // Status is filtered locally to support accurate stats card counts
+        /*
         if (request()->has('status') && request('status') != '') {
             $queryParams['status'] = request('status');
         }
+        */
 
         $apiUrl = 'https://app.talentindustrial.com/plumber/request?' . http_build_query($queryParams);
 
@@ -95,10 +98,6 @@ class InspectionRequestController extends Controller
             $requests = $requests->where('area', $area);
         }
 
-        if ($status) {
-            $requests = $requests->where('status', $status);
-        }
-
         if ($userPhone) {
             // Filter envoy users by phone
             $filteredUsers = $envoyUsers->filter(function ($user) use ($userPhone) {
@@ -132,6 +131,15 @@ class InspectionRequestController extends Controller
             });
         }
 
+        // Calculate status counts for stats cards BEFORE final status filter
+        $statusCounts = $requests->groupBy('status')->map->count();
+        $statusCounts['TOTAL'] = $requests->count();
+
+        // Apply final status filter for table display
+        if ($status) {
+            $requests = $requests->where('status', $status);
+        }
+
         // Get distinct cities, areas, and statuses for the dropdown
         $cities = $requests->pluck('city')->unique();
         $areas = $requests->pluck('area')->unique();
@@ -157,7 +165,7 @@ class InspectionRequestController extends Controller
         $withdrawPoints = $configs->firstWhere('key', 'withdraw_points')['value'] ?? 0;
         $loyaltyCapPercentage = $configs->firstWhere('key', 'loyalty_cap_percentage')['value'] ?? 10;
 
-        return view('admin.inspection-requests.index', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses', 'withdrawPoints', 'loyaltyCapPercentage'));
+        return view('admin.inspection-requests.index', compact('requests', 'envoyUsers', 'cities', 'areas', 'statuses', 'withdrawPoints', 'loyaltyCapPercentage', 'statusCounts'));
     }
 
     // ✅ Function to Store Only New "SEND" Requests as Notifications

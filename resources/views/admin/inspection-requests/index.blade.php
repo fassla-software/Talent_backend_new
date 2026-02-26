@@ -9,7 +9,50 @@ $statusTexts = [
 @endphp
 
 @section('content')
-<h1>Requests</h1>
+@php
+$statsConfig = [
+    'TOTAL' => ['label' => 'TOTAL', 'color' => 'secondary'],
+    'SEND' => ['label' => 'RECEIVED', 'color' => 'info'],
+    'ACCEPTED' => ['label' => 'INSPECTED', 'color' => 'primary'],
+    'CANCELLED' => ['label' => 'INADMISSIBLE', 'color' => 'danger'],
+    'PENDING' => ['label' => 'PENDING', 'color' => 'dark'],
+    'APPROVED' => ['label' => 'APPROVED', 'color' => 'success'],
+    'REJECTED' => ['label' => 'REJECTED', 'color' => 'danger'],
+    'ASSIGNED' => ['label' => 'ASSIGNED', 'color' => 'warning'],
+];
+@endphp
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    @foreach($statsConfig as $key => $config)
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-{{ $config['color'] }} shadow h-100 py-2" style="border-left: 0.25rem solid {{ 
+            $config['color'] === 'primary' ? '#0d6efd' : 
+            ($config['color'] === 'success' ? '#198754' : 
+            ($config['color'] === 'info' ? '#0dcaf0' : 
+            ($config['color'] === 'warning' ? '#ffc107' : 
+            ($config['color'] === 'danger' ? '#dc3545' : 
+            ($config['color'] === 'dark' ? '#212529' : '#6c757d'))))) 
+        }};">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-{{ $config['color'] }} text-uppercase mb-1" style="font-size: 0.7rem;">
+                            {{ $config['label'] }}
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ $statusCounts[$key] ?? 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endforeach
+</div>
 
 <!-- Filter Form -->
 <form method="GET" action="{{ url()->current() }}" id="filterForm">
@@ -84,10 +127,10 @@ $statusTexts = [
         </div>
 
         <!-- Filter & Clear Buttons -->
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-1 d-flex align-items-end mt-3">
             <button type="submit" class="btn btn-primary w-100">Filter</button>
         </div>
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-1 d-flex align-items-end mt-3">
             <a href="{{ url()->current() }}" class="btn btn-secondary w-100">Clear</a>
         </div>
     </div>
@@ -397,6 +440,21 @@ $statusTexts = [
     .bg-secondary {
         background-color: #6c757d !important;
     }
+
+    /* Grouping Styles */
+    .category-header {
+        border-radius: 4px;
+        color: #333;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .item .details {
+        margin-top: 4px;
+    }
+    .item .subtotal {
+        color: #0d6efd;
+    }
 </style>
 
 <script>
@@ -552,19 +610,25 @@ $statusTexts = [
                 currentRequestId = parseInt(requestData.id, 10);
 
                 const totalPoints = requestData.items.reduce((sum, item) => sum + (item.count * item.subcategory.points), 0);
-                const totalPrice = requestData.items.reduce((sum, item) => sum + (item.count * (item.subcategory.price || 0)), 0);
+                const totalPrice = requestData.items.reduce((sum, item) => sum + (item.count * (parseFloat(item.subcategory.price) || 0)), 0);
                 
                 const withdrawPointsVal = {{ $withdrawPoints }};
                 const loyaltyCapPct = {{ $loyaltyCapPercentage }};
+                const isCapEnabled = loyaltyCapPct != 0;
                 
                 let loyaltyValue = totalPoints * withdrawPointsVal;
                 const maxLoyalty = totalPrice * (loyaltyCapPct / 100);
                 
                 let isCapped = false;
                 let finalLoyalty = loyaltyValue;
-                if (loyaltyValue > maxLoyalty && totalPrice > 0) {
+                let finalPoints = totalPoints;
+
+                if (isCapEnabled && loyaltyValue > maxLoyalty && totalPrice > 0) {
                     finalLoyalty = maxLoyalty;
                     isCapped = true;
+                    if (withdrawPointsVal > 0) {
+                        finalPoints = Math.floor(finalLoyalty / withdrawPointsVal);
+                    }
                 }
 
                 const detailsHTML = `
@@ -600,32 +664,94 @@ $statusTexts = [
                         </span>
                     </div>
                     <div class="mb-3">
-                        <strong>Items:</strong>
-                        <div class="items-container">
-                            ${requestData.items
-                                .map(
-                                    (item) => `
-                                    <div class="item">
-                                        <img src="${item.subcategory.image}" alt="${item.subcategory.name}">
-                                        <span class="name">Name: ${item.subcategory.name}</span>
-                                        <span class="count">Count: ${item.count}</span>
-                                        <span class="count">Points: ${item.subcategory.points}</span>
-                                        <span class="count">Price: ${item.subcategory.price || 0}</span>
-                                        <span class="count">SubTotal: ${item.count * (item.subcategory.price || 0)}</span>
+                        <strong>Items by Category:</strong>
+                        <div class="groups-container mt-2">
+                            ${(() => {
+                                const itemsByCategory = requestData.items.reduce((groups, item) => {
+                                    const category = item.top_category_name || 'Other';
+                                    if (!groups[category]) {
+                                        groups[category] = [];
+                                    }
+                                    groups[category].push(item);
+                                    return groups;
+                                }, {});
+
+                                return Object.entries(itemsByCategory).map(([category, items]) => {
+                                    const categoryPoints = items.reduce((sum, item) => sum + (item.count * item.subcategory.points), 0);
+                                    const categoryPrice = items.reduce((sum, item) => sum + (item.count * (parseFloat(item.subcategory.price) || 0)), 0);
+                                    
+                                    return `
+                                        <div class="category-group mb-3 pb-2 border-bottom">
+                                            <h6 class="category-header bg-light p-2 border-start border-primary border-4 fw-bold mb-2 d-flex justify-content-between align-items-center">
+                                                <span>${category}</span>
+                                                <span class="ms-auto me-2 text-primary small" style="font-size: 0.75rem;">
+                                                    Tot Pts: ${categoryPoints} | Tot Price: ${categoryPrice.toFixed(2)}
+                                                </span>
+                                            </h6>
+                                            <div class="items-list">
+                                            ${items.map(item => `
+                                                <div class="item d-flex align-items-center gap-3 mb-2 ps-2">
+                                                    <img src="${item.subcategory.image}" alt="${item.subcategory.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                    <div class="flex-grow-1">
+                                                        <div class="name fw-bold small">${item.subcategory.name}</div>
+                                                        <div class="details small text-muted">
+                                                            <span>Qty: ${item.count}</span> | 
+                                                            <span>Pts: ${item.subcategory.points}</span> | 
+                                                            <span class="text-info">Total Pts: ${item.count * item.subcategory.points}</span> | 
+                                                            <span>Price: ${(parseFloat(item.subcategory.price) || 0).toFixed(2)}</span> | 
+                                                            <span class="subtotal fw-bold">Total price: ${(item.count * (parseFloat(item.subcategory.price) || 0)).toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                            </div>
+                                        </div>
+                                        `;
+                                }).join('');
+                            })()}
+                            <div class="mt-3 p-3 bg-light rounded border">
+                                <div class="row align-items-center">
+                                    <!-- Base Calculations Column -->
+                                    <div class="col-md-7 border-end">
+                                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-1 mb-2">Base Calculations</h6>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-secondary">Total Bill Price:</span>
+                                            <span class="fw-bold text-primary">${totalPrice.toFixed(2)}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-secondary">Base Points Value:</span>
+                                            <span class="fw-bold text-info">${totalPoints} Pts</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-secondary">Loyalty Ratio (×${withdrawPointsVal}):</span>
+                                            <span class="fw-bold text-success">${loyaltyValue.toFixed(2)}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-secondary">Loyalty Cap (${isCapEnabled ? loyaltyCapPct + '%' : 'Off'}):</span>
+                                            <span class="fw-bold text-warning">${isCapEnabled ? maxLoyalty.toFixed(2) : 'No Cap'}</span>
+                                        </div>
                                     </div>
-                                `
-                                )
-                                .join('')}
-                            <div class="mt-3 p-2 bg-light rounded">
-                                <div><strong>Total Bill Price:</strong> <span class="text-primary">${totalPrice.toFixed(2)}</span></div>
-                                <div><strong>Total Points:</strong> <span class="text-info">${totalPoints}</span></div>
-                                <div><strong>Loyalty Value (Points * ${withdrawPointsVal}):</strong> <span class="text-success">${loyaltyValue.toFixed(2)}</span></div>
-                                <div><strong>Loyalty Cap (${loyaltyCapPct}% of Bill):</strong> <span class="text-warning">${maxLoyalty.toFixed(2)}</span></div>
-                                <div class="mt-2">
-                                    <strong>Final Withdrawal Amount:</strong> 
-                                    <span class="badge ${isCapped ? 'bg-danger' : 'bg-success'}" style="font-size: 1.1rem;">
-                                        ${finalLoyalty.toFixed(2)} ${isCapped ? '(CAPPED)' : ''}
-                                    </span>
+
+                                    <!-- Final Results Column -->
+                                    <div class="col-md-5 ps-md-4">
+                                        <h6 class="text-uppercase text-muted fw-bold small border-bottom pb-1 mb-2">Final Award Decision</h6>
+                                        
+                                        <div class="mb-2">
+                                            <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">MONEY DEPOSITED</small>
+                                            <div class="badge ${isCapped ? 'bg-danger' : 'bg-success'} d-block p-2 text-start" style="font-size: 1.1rem; width: 100%;">
+                                                <i class="fas ${isCapped ? 'fa-lock' : 'fa-check-circle'} me-1"></i>
+                                                ${finalLoyalty.toFixed(2)} ${isCapped ? '<br><small style="font-size: 0.6rem;">(LIMITED BY CAP)</small>' : ''}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <small class="text-muted d-block fw-bold" style="font-size: 0.65rem;">TOTAL POINTS AWARDED</small>
+                                            <div class="badge ${isCapped ? 'bg-danger' : 'bg-info'} d-block p-2 text-start" style="font-size: 1rem; width: 100%;">
+                                                <i class="fas fa-star me-1"></i>
+                                                ${finalPoints} Pts ${isCapped ? '<br><small style="font-size: 0.6rem;">(ADJUSTED FOR CAP)</small>' : ''}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

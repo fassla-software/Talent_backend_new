@@ -1,53 +1,292 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mt-5">
-    <h1 class="mb-4 d-flex justify-content-between">
-        <span>Withdraw Requests</span>
-        <!-- Download Excel Button -->
-        <a href="{{ route('withdraw.download') }}" class="btn btn-success">Download Excel</a>
-    </h1>
+<div class="container-fluid mt-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-5">
+            <h1 class="m-0">Withdraw Requests</h1>
+        </div>
+        <div class="col-md-7 d-flex justify-content-end gap-3 align-items-center">
+            @hasPermission('plumber.withdrawal.edit')
+                <form action="{{ route('withdraw.upload') }}" method="POST" enctype="multipart/form-data" class="d-flex m-0">
+                    @csrf
+                    <div class="input-group" style="height: 45px;">
+                        <input type="file" name="file" class="form-control h-100" accept=".csv, .xlsx" required>
+                        <button type="submit" class="btn btn-primary px-4 h-100">Upload Excel</button>
+                    </div>
+                </form>
+            @endhasPermission
+            <a href="{{ route('withdraw.download') }}" class="btn btn-success d-flex align-items-center px-4 m-0 shadow-sm" style="height: 45px;">
+                <i class="fa fa-file-excel me-2"></i> Download Excel
+            </a>
+        </div>
+    </div>
 
-    @hasPermission('plumber.withdrawal.edit')
-    <!-- Upload Excel Form -->
-    <form action="{{ route('withdraw.upload') }}" method="POST" enctype="multipart/form-data" class="mb-4">
-        @csrf
-        <div class="input-group">
-            <input type="file" name="file" class="form-control" accept=".csv, .xlsx" required>
-            <button type="submit" class="btn btn-primary">Upload Excel</button>
+    <form method="GET" action="{{ route('withdraw.index') }}" class="card card-body mb-4 shadow-sm">
+        <div class="row g-3">
+            <!-- Filter by Status -->
+            <div class="col-md-2">
+                <label for="status" class="form-label small fw-bold">Status</label>
+                <select name="status" id="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                    <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                </select>
+            </div>
+
+            <!-- Filter by Transaction Type -->
+            <div class="col-md-2">
+                <label for="transaction_type" class="form-label small fw-bold">Transaction Type</label>
+                <select name="transaction_type" id="transaction_type" class="form-control">
+                    <option value="">All Types</option>
+                    <option value="wallet" {{ request('transaction_type') === 'wallet' ? 'selected' : '' }}>Wallet</option>
+                    <option value="bank" {{ request('transaction_type') === 'bank' ? 'selected' : '' }}>Bank</option>
+                    <option value="meeza" {{ request('transaction_type') === 'meeza' ? 'selected' : '' }}>Meeza</option>
+                </select>
+            </div>
+
+            <!-- Filter by Name -->
+            <div class="col-md-3">
+                <label for="name" class="form-label small fw-bold">Name</label>
+                <input type="text" name="name" id="name" value="{{ request('name') }}" class="form-control" placeholder="Search by name">
+            </div>
+
+            <!-- Filter by Phone -->
+            <div class="col-md-3">
+                <label for="phone" class="form-label small fw-bold">Phone</label>
+                <input type="text" name="phone" id="phone" class="form-control" value="{{ request('phone') }}" placeholder="Search by phone">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                <a href="{{ route('withdraw.index') }}" class="btn btn-secondary w-100">Reset</a>
+            </div>
         </div>
     </form>
-@endhasPermission
 
-    <form method="GET" action="{{ route('withdraw.index') }}" class="mb-4">
-        <label for="status">Filter by Status: </label>
-        <select name="status" id="status" class="form-control" style="width: auto; display: inline-block;">
-            <option value="">All</option>
-            <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-            <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
-            <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
-        </select>
-        
-        <label for="transaction_type">Filter by Transaction Type: </label>
-        <select name="transaction_type" id="status" class="form-control" style="width: auto; display: inline-block;">
-            <option value="">All</option>
-            <option value="wallet" {{ request('transaction_type') === 'wallet' ? 'selected' : '' }}>Wallet</option>
-            <option value="bank" {{ request('transaction_type') === 'bank' ? 'selected' : '' }}>Bank</option>
-            <option value="meeza" {{ request('transaction_type') === 'meeza' ? 'selected' : '' }}>Meeza</option>
-        </select>
-    
-    <label for="name" style="margin-left: 10px;">Filter by Name : </label>
-    <input type="text" name="name" id="name" value="{{ request('name') }}" 
-           class="form-control" style="width: 80px; display: inline-block;" 
-           >
-    <!-- Filter by Phone -->
-        <div class="col-md-3">
-            <input type="text" name="phone" class="form-control" value="{{ request('phone') }}" placeholder="Filter by Phone">
+    <!-- Quick Filters -->
+    <div class="mb-4 no-print">
+        <div class="d-flex flex-wrap align-items-center gap-4">
+            <!-- Status Quick Filters -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Status:</span>
+                <div class="btn-group shadow-sm" role="group">
+                    <a href="{{ request()->fullUrlWithQuery(['status' => null]) }}" 
+                       class="btn btn-sm {{ !request('status') ? 'btn-primary active' : 'btn-light border' }}">All</a>
+                    <a href="{{ request()->fullUrlWithQuery(['status' => 'pending']) }}" 
+                       class="btn btn-sm {{ request('status') === 'pending' ? 'btn-warning active' : 'btn-light border' }}">Pending</a>
+                    <a href="{{ request()->fullUrlWithQuery(['status' => 'approved']) }}" 
+                       class="btn btn-sm {{ request('status') === 'approved' ? 'btn-success active' : 'btn-light border' }}">Approved</a>
+                    <a href="{{ request()->fullUrlWithQuery(['status' => 'rejected']) }}" 
+                       class="btn btn-sm {{ request('status') === 'rejected' ? 'btn-danger active' : 'btn-light border' }}">Rejected</a>
+                </div>
+            </div>
+
+            <!-- Transaction Type Quick Filters -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Type:</span>
+                <div class="btn-group shadow-sm" role="group">
+                    <a href="{{ request()->fullUrlWithQuery(['transaction_type' => null]) }}" 
+                       class="btn btn-sm {{ !request('transaction_type') ? 'btn-secondary active' : 'btn-light border' }}">All</a>
+                    <a href="{{ request()->fullUrlWithQuery(['transaction_type' => 'wallet']) }}" 
+                       class="btn btn-sm {{ request('transaction_type') === 'wallet' ? 'btn-info active' : 'btn-light border' }}">Wallet</a>
+                    <a href="{{ request()->fullUrlWithQuery(['transaction_type' => 'bank']) }}" 
+                       class="btn btn-sm {{ request('transaction_type') === 'bank' ? 'btn-dark active' : 'btn-light border' }}">Bank</a>
+                    <a href="{{ request()->fullUrlWithQuery(['transaction_type' => 'meeza']) }}" 
+                       class="btn btn-sm {{ request('transaction_type') === 'meeza' ? 'btn-primary active' : 'btn-light border' }}">Meeza</a>
+                </div>
+            <!-- Date Quick Filters -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Date:</span>
+                <div class="btn-group shadow-sm" role="group">
+                    <a href="{{ request()->fullUrlWithQuery(['date_filter' => 'today', 'from_date' => null, 'to_date' => null, 'page' => null]) }}" 
+                       class="btn btn-sm {{ request('date_filter', 'today') === 'today' ? 'btn-primary active' : 'btn-light border' }}">Today</a>
+                    <a href="{{ request()->fullUrlWithQuery(['date_filter' => 'this_week', 'from_date' => null, 'to_date' => null, 'page' => null]) }}" 
+                       class="btn btn-sm {{ request('date_filter') === 'this_week' ? 'btn-primary active' : 'btn-light border' }}">This Week</a>
+                    <a href="{{ request()->fullUrlWithQuery(['date_filter' => 'this_month', 'from_date' => null, 'to_date' => null, 'page' => null]) }}" 
+                       class="btn btn-sm {{ request('date_filter') === 'this_month' ? 'btn-primary active' : 'btn-light border' }}">This Month</a>
+                    <a href="{{ request()->fullUrlWithQuery(['date_filter' => 'this_year', 'from_date' => null, 'to_date' => null, 'page' => null]) }}" 
+                       class="btn btn-sm {{ request('date_filter') === 'this_year' ? 'btn-primary active' : 'btn-light border' }}">This Year</a>
+                    <button type="button" id="custom-date-btn" onclick="toggleCustomDate()" 
+                            class="btn btn-sm {{ request('date_filter') === 'custom' ? 'btn-primary active' : 'btn-light border' }}">Custom</button>
+                </div>
+            </div>
         </div>
-                
-    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+
+        <!-- Custom Date Range Form -->
+        <div id="custom-date-container" class="mt-3 {{ request('date_filter') === 'custom' ? '' : 'd-none' }}">
+            <form method="GET" action="{{ route('withdraw.index') }}" class="d-flex align-items-end gap-2 p-3 bg-light border rounded shadow-sm">
+                @foreach(request()->except(['date_filter', 'from_date', 'to_date', 'page']) as $key => $value)
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endforeach
+                <input type="hidden" name="date_filter" value="custom">
+                <div>
+                    <label class="form-label small fw-bold">From</label>
+                    <input type="date" name="from_date" value="{{ request('from_date', now()->format('Y-m-d')) }}" class="form-control form-control-sm" required>
+                </div>
+                <div>
+                    <label class="form-label small fw-bold">To</label>
+                    <input type="date" name="to_date" value="{{ request('to_date', now()->format('Y-m-d')) }}" class="form-control form-control-sm" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm">Apply Range</button>
+                <button type="button" onclick="toggleCustomDate(false)" class="btn btn-outline-secondary btn-sm shadow-sm">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Skeleton Loader -->
+    <div id="skeleton-loader">
+        <div class="row mb-4 mt-3">
+            @for($i = 0; $i < 4; $i++)
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text" style="width: 40%"></div>
+                    </div>
+                </div>
+            </div>
+            @endfor
+        </div>
+        <div class="card shadow-sm p-4">
+            @for($i = 0; $i < 6; $i++)
+                <div class="skeleton skeleton-row"></div>
+            @endfor
+        </div>
+    </div>
+
+    <div id="content-real">
+    <!-- Stats Cards -->
+    <div class="row mb-4 mt-3">
+        <!-- Pending Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'pending']) }}" class="text-decoration-none card-filter-link">
+                <div class="card border-left-warning shadow h-100 py-2 transition-hover" style="border-left: 0.25rem solid #f6c23e !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1" style="font-size: 0.8rem;">Pending</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $stats['pending'] }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Approved Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'approved']) }}" class="text-decoration-none card-filter-link">
+                <div class="card border-left-success shadow h-100 py-2 transition-hover" style="border-left: 0.25rem solid #1cc88a !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1" style="font-size: 0.8rem;">Approved</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $stats['approved'] }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Rejected Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'rejected']) }}" class="text-decoration-none card-filter-link">
+                <div class="card border-left-danger shadow h-100 py-2 transition-hover" style="border-left: 0.25rem solid #e74a3b !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1" style="font-size: 0.8rem;">Rejected</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $stats['rejected'] }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Total Amount Card (Not Filterable by click but styled consistently) -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2" style="border-left: 0.25rem solid #4e73df !important;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1" style="font-size: 0.8rem;">Total Approved Amount</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ number_format($stats['total_approved_amount'], 2) }} EGP</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .transition-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .transition-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+        .card-filter-link:hover .text-gray-800 {
+            color: #4e73df !important;
+        }
+
+        /* Skeleton Loading Styles */
+        .skeleton {
+            background: #eee;
+            background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+            border-radius: 5px;
+            background-size: 200% 100%;
+            animation: 1.5s shine linear infinite;
+        }
+        @keyframes shine {
+            to {
+                background-position-x: -200%;
+            }
+        }
+        .skeleton-text { height: 15px; width: 100%; margin-bottom: 10px; }
+        .skeleton-title { height: 20px; width: 60%; margin-bottom: 15px; }
+        .skeleton-card { height: 100px; }
+        .skeleton-row { height: 40px; margin-bottom: 5px; }
         
-    </form>
+        #content-real { opacity: 0; transition: opacity 0.4s ease-in-out; }
+        #content-real.loaded { opacity: 1; }
+        #skeleton-loader { display: block; }
+        #skeleton-loader.hidden { display: none; }
+    </style>
+    <script>
+        function toggleCustomDate(show = true) {
+            const container = document.getElementById('custom-date-container');
+            const btn = document.getElementById('custom-date-btn');
+            
+            if (show === false || !container.classList.contains('d-none')) {
+                container.classList.add('d-none');
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-light', 'border');
+            } else {
+                container.classList.remove('d-none');
+                btn.classList.add('btn-primary', 'active');
+                btn.classList.remove('btn-light', 'border');
+            }
+        }
+    </script>
     <!-- Withdraw Requests Table -->
     <table class="table table-bordered" style="position: relative; z-index: 1;">
         <thead>
@@ -60,6 +299,7 @@
     		<th>Payment Identifier</th>
             <th>Request Date</th>
             <th>Status</th>
+            <th>Rejection Reason</th>
             <th>Actions</th>
         </tr>
         </thead>
@@ -73,55 +313,53 @@
                 <td>{{ ucfirst($withdraw['transaction_type']) }}</td>
  			    <td>{{ $withdraw['payment_identifier'] ?? 'N/A' }}</td>
                 <td>{{ \Carbon\Carbon::parse($withdraw['request_date'])->format('Y-m-d H:i:s') }}</td>
-                <td>{{ ucfirst($withdraw['status']) }}</td>
+                <td>
+                    @if($withdraw['status'] === 'pending')
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    @elseif($withdraw['status'] === 'approved')
+                        <span class="badge bg-success">Approved</span>
+                    @elseif($withdraw['status'] === 'rejected')
+                        <span class="badge bg-danger">Rejected</span>
+                    @else
+                        <span class="badge bg-secondary">{{ ucfirst($withdraw['status']) }}</span>
+                    @endif
+                </td>
+                <td>{{ $withdraw['rejection_reason'] ?? 'N/A' }}</td>
                 <td>
     
     @hasPermission('plumber.withdrawal.edit')
-
-<div class="dropdown" style="display: inline; position: relative;">
     @if($withdraw['status'] === 'pending')
-        <button 
-            class="btn btn-secondary btn-sm dropdown-toggle" 
-            type="button"
-            id="dropdownMenuButton{{ $withdraw['id'] }}" 
-            data-bs-toggle="dropdown" 
-            aria-expanded="false"
-            style="z-index: 1050;">
-            Status
-        </button>
-        <ul 
-            class="dropdown-menu" 
-            aria-labelledby="dropdownMenuButton{{ $withdraw['id'] }}" 
-            style="z-index: 1050; position: absolute;">
-            @foreach(['pending', 'approved', 'rejected'] as $status)
-            <li>
-                <form 
-                    action="{{ route('withdraw.updateStatus', $withdraw['id']) }}" 
-                    method="POST" 
-                    id="status-form-{{ $withdraw['id'] }}-{{ $status }}">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="{{ $status }}">
-                    <a 
-                        class="dropdown-item" 
-                        href="javascript:void(0)" 
-                        onclick="document.getElementById('status-form-{{ $withdraw['id'] }}-{{ $status }}').submit();">
-                        {{ ucfirst($status) }}
+        <div class="dropdown" style="display: inline; position: relative;">
+            <button 
+                class="btn btn-secondary btn-sm dropdown-toggle" 
+                type="button"
+                id="dropdownMenuButton{{ $withdraw['id'] }}" 
+                data-bs-toggle="dropdown" 
+                aria-expanded="false"
+                style="z-index: 1050;">
+                Status
+            </button>
+            <ul 
+                class="dropdown-menu" 
+                aria-labelledby="dropdownMenuButton{{ $withdraw['id'] }}" 
+                style="z-index: 1050; position: absolute;">
+                <li>
+                    <form action="{{ route('withdraw.updateStatus', $withdraw['id']) }}" method="POST" id="status-form-{{ $withdraw['id'] }}-approved">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="approved">
+                        <a class="dropdown-item" href="javascript:void(0)" onclick="document.getElementById('status-form-{{ $withdraw['id'] }}-approved').submit();">Approved</a>
+                    </form>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="javascript:void(0)" 
+                       onclick="openRejectionModal('{{ route('withdraw.updateStatus', $withdraw['id']) }}')">
+                        Rejected
                     </a>
-                </form>
-            </li>
-            @endforeach
-        </ul>
-    @else
-        <button 
-            class="btn btn-secondary btn-sm" 
-            type="button"
-            disabled
-            style="z-index: 1050;">
-            {{ ucfirst($withdraw['status']) }}
-        </button>
+                </li>
+            </ul>
+        </div>
     @endif
-</div>
     @endhasPermission
 
     
@@ -152,14 +390,77 @@
             </tr>
         @empty
             <tr>
-                <td colspan="8" class="text-center">No withdraw requests available.</td>
+                <td colspan="10" class="text-center">No withdraw requests available.</td>
             </tr>
         @endforelse
         </tbody>
     </table>
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-5">
+        <div>
             <!-- Pagination (if needed) -->
-        {{ $data->links() }}
+            {{ $data->links() }}
+        </div>
+        
+        <div class="d-flex align-items-center gap-2">
+            <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Rows per page:</span>
+            <select name="per_page" id="per_page_select" class="form-select form-select-sm" style="width: auto;" onchange="updatePerPage(this.value)">
+                @foreach([10, 25, 50, 100] as $count)
+                    <option value="{{ $count }}" {{ request('per_page') == $count ? 'selected' : '' }}>{{ $count }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
 </div>
+
+<!-- Rejection Reason Modal -->
+<div class="modal fade" id="rejectionModal" tabindex="-1" aria-labelledby="rejectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="rejectionForm" method="POST">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="status" value="rejected">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectionModalLabel">Reject Withdraw Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="4" required placeholder="Enter the reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Confirm Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openRejectionModal(actionUrl) {
+        document.getElementById('rejectionForm').action = actionUrl;
+        var myModal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+        myModal.show();
+    }
+
+    function updatePerPage(perPage) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', perPage);
+        url.searchParams.delete('page'); // Reset to page 1 when changing per_page
+        window.location.href = url.toString();
+    }
+
+    // Hide skeleton and show real content when page is ready
+    window.addEventListener('load', function() {
+        setTimeout(() => { // Small timeout for visual smoothness
+            document.getElementById('skeleton-loader').classList.add('hidden');
+            document.getElementById('content-real').classList.add('loaded');
+        }, 300);
+    });
+</script>
 @endsection
 
 <script>
@@ -197,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <td>${request.transaction_type}</td>
                             <td>${request.request_date}</td>
                             <td>${request.status}</td>
+                            <td>${request.rejection_reason || 'N/A'}</td>
                             <td>
                                 ${imageURL 
                                     ? `<img 
@@ -223,6 +525,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <th>Transaction Type</th>
                                     <th>Request Date</th>
                                     <th>Status</th>
+                                    <th>Rejection Reason</th>
                                     <th>Image</th>
                                 </tr>
                             </thead>
@@ -265,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         padding: 30px;
                                         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                                         width: 100%;
-                                        max-width: 900px; /* Optional: Limit the maximum width of the container */
+                                        max-width: 1200px; /* Optional: Limit the maximum width of the container */
                                         overflow: visible; /* Prevent clipping */
                                     }
 

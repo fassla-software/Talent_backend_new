@@ -32,6 +32,7 @@ class WithdrawRequest extends Model {
   public transaction_type!: 'wallet' | 'bank' | 'meeza';
   public request_date!: Date;
   public processed_date!: Date | null;
+  public rejection_reason!: string | null;
 
   // Timestamps
   public readonly created_at!: Date;
@@ -87,6 +88,10 @@ WithdrawRequest.init(
     },
     processed_date: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    rejection_reason: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },

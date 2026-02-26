@@ -15,49 +15,83 @@ class WithdrawController extends Controller
     // Display withdraw requests
     public function index(Request $request)
     {
-//         // Fetch data from the API for withdraw requests
-//         $response = Http::get('https://app.talentindustrial.com/plumber/withdraw');
+        //         // Fetch data from the API for withdraw requests
+        //         $response = Http::get('https://app.talentindustrial.com/plumber/withdraw');
 
-//         // Ensure the response is not null before logging
-//         if ($response->successful() && $response->json()) {
-//             Log::info('API Response for Withdraw Index', ['data' => $response->json()]);
-//             $data = $response->json();
-//             return view('withdraw.index', compact('data'));
-//         }
-        // Get the status filter from the request
-    $statusFilter = $request->input('status');
-    $transactionTypeFilter = $request->input('transaction_type');
-    $nameFilter = $request->input('name');
-    $phoneFilter = $request->input('phone'); // Add phone filter
+        //         // Ensure the response is not null before logging
+        //         if ($response->successful() && $response->json()) {
+        //             Log::info('API Response for Withdraw Index', ['data' => $response->json()]);
+        //             $data = $response->json();
+        //             return view('withdraw.index', compact('data'));
+        //         }
+        // Get filters from request
+        $statusFilter = $request->input('status');
+        $transactionTypeFilter = $request->input('transaction_type');
+        $nameFilter = $request->input('name');
+        $phoneFilter = $request->input('phone');
+    
+        // Date Filtration Logic
+        $dateFilter = $request->input('date_filter', 'today'); // Default to today
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
 
+        $startDate = null;
+        $endDate = now()->endOfDay();
 
-    // Retrieve plumbers with their associated users and apply the status filter if present
-    $data = PlumberWithdraw::with(['plumber'])
-        ->when($statusFilter, function ($query) use ($statusFilter) {
-            return $query->where('status', $statusFilter);
-        })
-   ->when($transactionTypeFilter, function ($query) use ($transactionTypeFilter) {
-            return $query->where('transaction_type', $transactionTypeFilter);
-        })
-   ->when($nameFilter, function ($query) use ($nameFilter) {
-            return $query->whereHas('plumber.user', function ($query) use ($nameFilter) {
-                $query->where('name','LIKE', '%'. $nameFilter . '%');
+        if ($dateFilter === 'today') {
+            $startDate = now()->startOfDay();
+        } elseif ($dateFilter === 'this_week') {
+            // Start of week as Saturday
+            $startDate = now()->startOfWeek(\Carbon\CarbonInterface::SATURDAY);
+        } elseif ($dateFilter === 'this_month') {
+            $startDate = now()->startOfMonth();
+        } elseif ($dateFilter === 'this_year') {
+            $startDate = now()->startOfYear();
+        } elseif ($dateFilter === 'custom' && $fromDate && $toDate) {
+            $startDate = \Carbon\Carbon::parse($fromDate)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($toDate)->endOfDay();
+        }
+
+        // Base query for all matching records (before status filter for stats)
+        $baseQuery = PlumberWithdraw::with(['plumber.user'])
+            ->when($startDate, function ($query) use ($startDate, $endDate) {
+                return $query->whereBetween('request_date', [$startDate, $endDate]);
+            })
+            ->when($transactionTypeFilter, function ($query) use ($transactionTypeFilter) {
+                return $query->where('transaction_type', $transactionTypeFilter);
+            })
+            ->when($nameFilter, function ($query) use ($nameFilter) {
+                return $query->whereHas('plumber.user', function ($query) use ($nameFilter) {
+                $query->where('name', 'LIKE', '%' . $nameFilter . '%');
             });
-        })
-    ->when($phoneFilter, function ($query) use ($phoneFilter) {
+            })
+            ->when($phoneFilter, function ($query) use ($phoneFilter) {
                 return $query->whereHas('plumber.user', function ($query) use ($phoneFilter) {
                     $query->where('phone', 'LIKE', '%' . $phoneFilter . '%');
                 });
-            })
-    	->latest('request_date')
-        ->paginate(5)->withQueryString();
+            });
+
+        // Calculate Stats
+        $stats = [
+            'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
+            'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
+            'total_approved_amount' => (clone $baseQuery)->where('status', 'approved')->sum('amount'),
+        ];
+
+        // Final paginated list with status filter
+        $perPage = $request->input('per_page', 10);
+        $data = $baseQuery->when($statusFilter, function ($query) use ($statusFilter) {
+            return $query->where('status', $statusFilter);
+        })
+        ->latest('request_date')
+        ->paginate($perPage)
+        ->withQueryString();
     
-    	// $data = PlumberWithdraw::with(['plumber'])->get();
-    	// return $data;
-    	if($data)
+        if($data)
         {
-        	Log::info('API Response for Withdraw Index', ['data' => $data]);
-        	return view('withdraw.index', compact('data'));
+            Log::info('API Response for Withdraw Index', ['data' => $data]);
+            return view('withdraw.index', compact('data', 'stats'));
         }
 
         // Log error if API fails or returns no data
@@ -131,56 +165,61 @@ class WithdrawController extends Controller
     }
 
     // Display withdraw logs
-   public function logs($userId)
-{
-    // Get ALL withdraws for that user (not just the first)
-    $withdraws = PlumberWithdraw::with(['plumber.user'])
-                                ->where('requestor_id', $userId)
-                                ->get();
+    public function logs($userId)
+    {
+        // Get ALL withdraws for that user (not just the first)
+        $withdraws = PlumberWithdraw::with(['plumber.user'])
+            ->where('requestor_id', $userId)
+            ->get();
 
-    // If none found, return an empty array (200 OK so the .catch won't trigger)
-    if ($withdraws->isEmpty()) {
-        return response()->json([], 200);
+        // If none found, return an empty array (200 OK so the .catch won't trigger)
+        if ($withdraws->isEmpty()) {
+            return response()->json([], 200);
+        }
+
+        return response()->json($withdraws, 200);
     }
 
-    return response()->json($withdraws, 200);
-}
 
+    public function downloadUserWithdrawals($userId)
+    {
+        // Fetch all withdrawals for the given user
+        $withdrawals = PlumberWithdraw::where('requestor_id', $userId)->get();
 
-public function downloadUserWithdrawals($userId)
-{
-    // Fetch all withdrawals for the given user
-    $withdrawals = PlumberWithdraw::where('requestor_id', $userId)->get();
-
-    // Check if withdrawals exist for the user
-    if ($withdrawals->isEmpty()) {
-        return redirect()->back()->with('error', 'No withdrawal requests found for this user.');
+        // Check if withdrawals exist for the user
+        if ($withdrawals->isEmpty()) {
+            return redirect()->back()->with('error', 'No withdrawal requests found for this user.');
+        }
+        // Export the data to Excel using the custom export class
+        return Excel::download(new PlumberWithdrawExport($withdrawals), 'history_withdrawals.xlsx');
     }
-    // Export the data to Excel using the custom export class
-    return Excel::download(new PlumberWithdrawExport($withdrawals), 'history_withdrawals.xlsx');
-}
 
-public function destroy($id)
-{
-    $withdraw = PlumberWithdraw::findOrFail($id);
-	$withdraw->delete();
-	return response()->json('Withdraw request deleted successfully.', 200);
-}
+    public function destroy($id)
+    {
+        $withdraw = PlumberWithdraw::findOrFail($id);
+        $withdraw->delete();
+        return response()->json('Withdraw request deleted successfully.', 200);
+    }
 
     public function updateStatus(Request $request, PlumberWithdraw $withdraw)
     {
         $request->validate([
             'status' => 'required|in:pending,approved,rejected',
+            'rejection_reason' => 'required_if:status,rejected|string|nullable',
         ]);
         $withdraw->status = $request->status;
-    
-        // Set the instant_withdrawal to 0 on the related Plumber model
-    	$plumber = $withdraw->plumber;
-    	$plumber->instant_withdrawal = 0;
-    	$plumber->withdraw_money = 0;
+        if ($request->status === 'rejected') {
+            $withdraw->rejection_reason = $request->rejection_reason;
+        }
 
-    	// Save the plumber model to persist the change
-    	$plumber->save();
+        // Set the instant_withdrawal to 0 on the related Plumber model
+        $plumber = $withdraw->plumber;
+        if ($plumber) {
+            $plumber->instant_withdrawal = 0;
+            $plumber->withdraw_money = 0;
+            $plumber->save();
+        }
+
         $withdraw->save();
         return redirect()->route('withdraw.index')->with('success', 'Status changed successfully.');
     }

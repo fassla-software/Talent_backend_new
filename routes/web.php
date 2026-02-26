@@ -184,6 +184,12 @@ Route::post('/withdraw/upload', [WithdrawController::class, 'upload'])->name('wi
 Route::get('/admin/plumber-users', [PlumberUsersController::class, 'index'])->name('admin.plumberUsers');
 
 Route::get('/withdraw', [WithdrawController::class, 'index'])->name('withdraw.index');
+
+// Envoy Notes
+Route::resource('admin/envoy-notes', \App\Http\Controllers\Admin\EnvoyNoteController::class)
+    ->names('admin.envoy-notes')
+    ->middleware(['auth', 'checkPermission']);
+
 Route::delete('/withdraw/destroy/{id}', [WithdrawController::class, 'destroy'])->name('withdraw.destroy');
 
 Route::get('/withdraws/logs/{userId}', [WithdrawController::class, 'logs'])->name('withdraw.logs');

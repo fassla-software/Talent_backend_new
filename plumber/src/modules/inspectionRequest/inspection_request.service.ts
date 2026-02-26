@@ -135,8 +135,15 @@ export const getInspectionRequest = async (id: string) => {
     : [];
 
   if (requestObject.items) {
-    requestObject.items.forEach((item: { subcategory: { image: string } }) => {
-      item.subcategory.image = item.subcategory.image ? (viewImages(item.subcategory.image) as string) : '';
+    const categories = await getPlumberCategories();
+    requestObject.items.forEach((item: any) => {
+      const subcategory = item.subcategory;
+      if (subcategory) {
+        const parentCategories = getAllParents(categories, subcategory.id);
+        const topCategory = parentCategories.length > 0 ? parentCategories[parentCategories.length - 1] : subcategory;
+        item.top_category_name = topCategory.name;
+        item.subcategory.image = subcategory.image ? (viewImages(subcategory.image) as string) : '';
+      }
     });
   }
   if (
@@ -196,6 +203,7 @@ export const getInspectionRequests = async (filter: IFilter) => {
     offset: Number(skip),
     order: [['createdAt', 'DESC']],
   });
+  const categories = await getPlumberCategories();
   // Map through each request and convert to plain object
   const requestObjects = requestsWithItems.map(request => {
     const requestObject = request.toJSON();
@@ -223,8 +231,14 @@ export const getInspectionRequests = async (filter: IFilter) => {
     delete requestObject.user_long;
     delete requestObject.inspection_lat;
     delete requestObject.inspection_long;
-    requestObject.items.forEach((item: { subcategory: { image: string } }) => {
-      item.subcategory.image = item.subcategory.image ? (viewImages(item.subcategory.image) as string) : '';
+    requestObject.items.forEach((item: any) => {
+      const subcategory = item.subcategory;
+      if (subcategory) {
+        const parentCategories = getAllParents(categories, subcategory.id);
+        const topCategory = parentCategories.length > 0 ? parentCategories[parentCategories.length - 1] : subcategory;
+        item.top_category_name = topCategory.name;
+        item.subcategory.image = subcategory.image ? (viewImages(subcategory.image) as string) : '';
+      }
     });
     return requestObject;
   });
@@ -520,6 +534,7 @@ export const approveInspectionRequest = async (data: {
   const pointValue = await getConfigService('withdraw_points');
   const loyaltyCapPercentage = await getConfigService('loyalty_cap_percentage'); // e.g., "10" for 10%
   const capRate = loyaltyCapPercentage ? Number(loyaltyCapPercentage) / 100 : 0.1; // Default to 10%
+  const isCapEnabled = loyaltyCapPercentage !== '0';
 
   // Calculate total price of the bill
   const totalBillPrice = items.reduce((acc, item) => {
@@ -528,18 +543,24 @@ export const approveInspectionRequest = async (data: {
   }, 0);
 
   let money = points * Number(pointValue);
+  let finalPoints = points;
 
   // Apply loyalty cap: withdraw value shouldn't exceed percentage of the bill
-  const maxLoyaltyValue = totalBillPrice * capRate;
-  if (money > maxLoyaltyValue && totalBillPrice > 0) {
-    money = maxLoyaltyValue;
+  if (isCapEnabled && totalBillPrice > 0) {
+    const maxLoyaltyValue = totalBillPrice * capRate;
+    if (money > maxLoyaltyValue) {
+      money = maxLoyaltyValue;
+      if (Number(pointValue) > 0) {
+        finalPoints = Math.floor(money / Number(pointValue));
+      }
+    }
   }
 
   const [plumber] = await Plumber.update(
     {
-      fixed_points: Sequelize.literal(`fixed_points + ${points}`),
-      gift_points: Sequelize.literal(`gift_points + ${points}`),
-      instant_withdrawal: Sequelize.literal(`instant_withdrawal + ${points}`),
+      fixed_points: Sequelize.literal(`fixed_points + ${finalPoints}`),
+      gift_points: Sequelize.literal(`gift_points + ${finalPoints}`),
+      instant_withdrawal: Sequelize.literal(`instant_withdrawal + ${finalPoints}`),
       withdraw_money: Sequelize.literal(`withdraw_money + ${money}`),
     },
     {

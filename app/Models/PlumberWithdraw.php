@@ -16,6 +16,9 @@ class PlumberWithdraw extends Model
     protected $guarded = ['id'];
     protected $table = 'plumber_withdraw_requests';
 
+    // The 'rejection_reason' column is added via database migration.
+    // It's already mass-assignable because it's not in the $guarded array.
+
     public function plumber(): BelongsTo
     {
         return $this->belongsTo(Plumber::class, 'requestor_id', 'user_id');

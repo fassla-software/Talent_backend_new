@@ -185,6 +185,15 @@
         </span>
     </a>
 </li>
+<li>
+    <a class="menu {{ $request->routeIs('admin.envoy-notes.*') ? 'active' : '' }}"
+        href="{{ route('admin.envoy-notes.index') }}">
+        <span>
+            <i class="fa-solid fa-note-sticky menu-icon"></i>
+            {{ __('Envoy Notes') }}
+        </span>
+    </a>
+</li>
 @endhasPermission        
 <li class="menu-divider">
     <span class="menu-title">{{ __('Distributor') }}</span>
