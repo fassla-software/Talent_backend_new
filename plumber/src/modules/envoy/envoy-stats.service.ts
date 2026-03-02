@@ -5,6 +5,9 @@ import VisitReport from '../inspectionVisit/visit-report.model';
 import InspectionVisit, { VisitStatus } from '../inspectionVisit/inspection-visit.model';
 import EnvoySetting from './envoy.model';
 import ClientStatusHistory, { ClientType } from '../statusHistory/status-history.model';
+import User from '../user/user.model';
+import Role, { Roles } from '../role/role.model';
+import ModelHasRoles from '../role/model_has_roles.model';
 
 export type TimePeriodType = 'week' | 'month' | 'quarter' | 'year';
 
@@ -454,4 +457,57 @@ export const getEnvoyStatistics = async (
     result.incentives = Number(earnedIncentives.toFixed(2));
 
     return result;
+};
+
+/**
+ * Get aggregate statistics for all envoys
+ */
+export const getAllEnvoysAggregateStatistics = async (
+    periodType: TimePeriodType,
+    date?: Date
+) => {
+    // Find envoy role
+    const envoyRole = await Role.findOne({ where: { name: Roles.Envoy } });
+    if (!envoyRole) {
+        return {
+            performance: 0,
+            conversion: 0,
+            retention: 0,
+        };
+    }
+
+    // Find all users with envoy role
+    const modelHasRoles = await ModelHasRoles.findAll({
+        where: {
+            role_id: envoyRole.id,
+            model_type: 'App\\Models\\User' // Laravel style model type
+        }
+    });
+
+    const envoyIds = modelHasRoles.map(mhr => mhr.model_id);
+
+    if (envoyIds.length === 0) {
+        return {
+            performance: 0,
+            conversion: 0,
+            retention: 0,
+        };
+    }
+
+    // Get statistics for each envoy
+    const allStats = await Promise.all(
+        envoyIds.map(id => getEnvoyStatistics(Number(id), periodType, date))
+    );
+
+    // Calculate averages
+    const totalEnvoys = allStats.length;
+    const totalPerformance = allStats.reduce((acc, stat) => acc + stat.performance_score, 0);
+    const totalConversion = allStats.reduce((acc, stat) => acc + stat.conversion.conversion_rate, 0);
+    const totalRetention = allStats.reduce((acc, stat) => acc + stat.retention.retention_rate, 0);
+
+    return {
+        performance: Number((totalPerformance / totalEnvoys).toFixed(2)),
+        conversion: Number((totalConversion / totalEnvoys).toFixed(2)),
+        retention: Number((totalRetention / totalEnvoys).toFixed(2)),
+    };
 };

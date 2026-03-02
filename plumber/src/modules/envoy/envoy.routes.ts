@@ -27,6 +27,11 @@ router.post(
 );
 
 router.get(
+    '/admin/aggregate-stats',
+    envoyController.getAggregateStatisticsHandler
+);
+
+router.get(
     '/notifications',
     authenticate,
     envoyController.getNotificationsHandler

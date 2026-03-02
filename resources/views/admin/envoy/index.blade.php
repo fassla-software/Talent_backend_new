@@ -9,20 +9,52 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card bg-primary text-white">
+    <div class="row mb-4 g-3">
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-primary text-white h-100">
                 <div class="card-body">
-                    <h5 class="card-title">{{ __('Total Envoys') }}</h5>
-                    <h2 class="mb-0">{{ $totalEnvoys }}</h2>
+                    <h6 class="card-title opacity-75">{{ __('Total Envoys') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ $totalEnvoys }}</h3>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card bg-success text-white">
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-success text-white h-100">
                 <div class="card-body">
-                    <h5 class="card-title">{{ __('Total Visits') }}</h5>
-                    <h2 class="mb-0">{{ $totalVisits }}</h2>
+                    <h6 class="card-title opacity-75">{{ __('Total Visits') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ $totalVisits }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title opacity-75">{{ __('Performance') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ $performanceAvg }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h6 class="card-title opacity-75">{{ __('Total Sells Target') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ number_format($totalSellsTarget, 2) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title opacity-75">{{ __('Conversion') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ $conversionAvg }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title opacity-75">{{ __('Retention') }}</h6>
+                    <h3 class="mb-0 fw-bold">{{ $retentionAvg }}%</h3>
                 </div>
             </div>
         </div>
@@ -33,10 +65,19 @@
         <div class="card-body">
             <form method="GET" action="{{ route('admin.envoy.index') }}">
                 <div class="row align-items-end">
-                    <div class="col-md-8">
+                    <div class="col-md-5">
                         <label for="search" class="form-label">{{ __('Search') }}</label>
                         <input type="text" name="search" id="search" class="form-control" 
                                placeholder="Search by name or phone number" value="{{ request('search') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="period" class="form-label">{{ __('Stats Period') }}</label>
+                        <select name="period" id="period" class="form-select">
+                            <option value="week" {{ request('period') == 'week' ? 'selected' : '' }}>{{ __('This Week') }}</option>
+                            <option value="month" {{ request('period') == 'month' ? 'selected' : '' }}>{{ __('This Month') }}</option>
+                            <option value="quarter" {{ request('period') == 'quarter' ? 'selected' : '' }}>{{ __('This Quarter') }}</option>
+                            <option value="year" {{ request('period') == 'year' ? 'selected' : '' }}>{{ __('This Year') }}</option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <button type="submit" class="btn btn-primary w-100">{{ __('Filter') }}</button>

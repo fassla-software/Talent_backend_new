@@ -34,8 +34,42 @@ class EnvoyController extends Controller
 
         $users = $usersQuery->paginate(20);
 
+        $period = $request->get('period', 'week');
+        $scalingFactor = 1;
+        switch ($period) {
+            case 'week': $scalingFactor = 0.25; break;
+            case 'month': $scalingFactor = 1; break;
+            case 'quarter': $scalingFactor = 3; break;
+            case 'year': $scalingFactor = 12; break;
+        }
+
         // Stats
         $totalEnvoys = User::role('envoy')->count();
+
+        // Calculate total sells target based on period
+        $totalSellsTarget = EnvoySetting::sum('target_sales') * $scalingFactor;
+
+        // Default aggregate stats
+        $performanceAvg = 0;
+        $conversionAvg = 0;
+        $retentionAvg = 0;
+
+        // Fetch Aggregate stats from API
+        try {
+            $period = $request->get('period', 'week');
+            $aggregateResponse = Http::get('https://app.talentindustrial.com/plumber/envoy/admin/aggregate-stats', [
+                'period' => $period
+            ]);
+            
+            if ($aggregateResponse->successful()) {
+                $aggData = $aggregateResponse->json()['data'];
+                $performanceAvg = $aggData['performance'] ?? 0;
+                $conversionAvg = $aggData['conversion'] ?? 0;
+                $retentionAvg = $aggData['retention'] ?? 0;
+            }
+        } catch (\Exception $e) {
+            logger()->error('Failed to fetch aggregate envoy stats: ' . $e->getMessage());
+        }
         
         // Fetch Total Visits from API
         $totalVisits = 0;
@@ -56,7 +90,8 @@ class EnvoyController extends Controller
             // Log error or ignore
         }
 
-        return view('admin.envoy.index', compact('users', 'totalEnvoys', 'totalVisits'));
+        $selectedPeriod = $request->get('period', 'week');
+        return view('admin.envoy.index', compact('users', 'totalEnvoys', 'totalVisits', 'totalSellsTarget', 'performanceAvg', 'conversionAvg', 'retentionAvg', 'selectedPeriod'));
     }
 
     public function create()

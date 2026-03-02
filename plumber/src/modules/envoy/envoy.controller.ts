@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import * as envoyService from './envoy.service';
 import { Roles } from '../role/role.model';
-import { getEnvoyStatistics, TimePeriodType } from './envoy-stats.service';
+import { getEnvoyStatistics, getAllEnvoysAggregateStatistics, TimePeriodType } from './envoy-stats.service';
 
 export const getEnvoySettingHandler = asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -136,3 +136,26 @@ export const updateProfileHandler = asyncHandler(async (req: any, res: Response)
         ...result,
     });
 }, 'Failed to update profile');
+
+export const getAggregateStatisticsHandler = asyncHandler(
+    async (req: Request, res: Response) => {
+        const period = (req.query.period as TimePeriodType) || 'week';
+        const dateStr = req.query.date as string | undefined;
+
+        // Validate period
+        if (!['week', 'month', 'quarter', 'year'].includes(period)) {
+            return res.status(400).json({
+                message: 'Invalid period. Must be week, month, quarter, or year',
+            });
+        }
+
+        const date = dateStr ? new Date(dateStr) : undefined;
+        const statistics = await getAllEnvoysAggregateStatistics(period, date);
+
+        res.status(200).json({
+            message: 'Aggregate statistics retrieved successfully',
+            data: statistics,
+        });
+    },
+    'Failed to get aggregate statistics'
+);
